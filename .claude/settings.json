@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(./gradlew installDebug:*)",
+      "Bash(./gradlew --version)",
+      "Bash(java -version)",
+      "Bash(adb version)",
+      "Bash(adb devices:*)",
+      "Bash(adb logcat:*)",
+      "Bash(adb exec-out screencap:*)",
+      "Bash(sdkmanager --list:*)",
+      "Bash(sdkmanager --version)"
+    ]
+  }
+}

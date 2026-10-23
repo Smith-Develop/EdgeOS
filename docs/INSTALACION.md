@@ -9,6 +9,11 @@ Tiempo: unos 30 minutos la primera vez, casi todo esperando a que Android Studio
 > La versión 0.1 aún no se ha compilado nunca (ver el [README](../README.md)). Si algún paso falla con un
 > error de compilación, copia el mensaje en un *issue*.
 
+> [!TIP]
+> **¿Prefieres que lo haga Claude Code?** Clona el repo, ejecuta `claude` dentro de la carpeta y dile
+> *"Instala EdgeOS en mi Moto Edge 70. Ve diciéndome lo que necesites de mí."* Sigue las instrucciones de
+> [`CLAUDE.md`](../CLAUDE.md) y solo te pide los pasos que se hacen en el teléfono. Esta guía es para hacerlo a mano.
+
 ## Lo que necesitas
 
 - El teléfono, con Android 13 o superior, y su cable USB.

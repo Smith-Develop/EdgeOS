@@ -53,6 +53,26 @@ de la app en marcha. Los iconos son genéricos, como ejemplo: en tu teléfono se
 
 ## Instalación
 
+### La forma fácil: con Claude Code
+
+El repo trae instrucciones para [Claude Code](https://claude.com/claude-code) ([`CLAUDE.md`](CLAUDE.md)): él
+instala las herramientas, compila, corrige los errores, instala la app en el teléfono y solo te pide lo que tienes
+que hacer tú con el móvil en la mano.
+
+1. Instala Claude Code en tu ordenador ([guía](https://code.claude.com/docs/en/quickstart)).
+2. Abre una terminal y ejecuta:
+   ```bash
+   git clone https://github.com/Smith-Develop/EdgeOS.git
+   cd EdgeOS
+   claude
+   ```
+3. Dile:
+   > Instala EdgeOS en mi Moto Edge 70. Ve diciéndome lo que necesites de mí.
+
+Te pedirá permiso antes de instalar algo en el ordenador o de cambiar algo en el teléfono.
+
+### A mano
+
 La guía completa, paso a paso y con solución de problemas, está en **[docs/INSTALACION.md](docs/INSTALACION.md)**.
 En resumen:
 
