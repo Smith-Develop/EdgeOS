@@ -8,6 +8,7 @@ compose = "1.12.0"
 backdrop = "2.0.1"
 kyantShapes = "1.2.1"
 shizuku = "13.1.5"
+osmdroid = "6.1.20"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core" }
@@ -19,6 +20,7 @@ kyant-backdrop = { group = "io.github.kyant0", name = "backdrop", version.ref = 
 kyant-shapes = { group = "io.github.kyant0", name = "shapes", version.ref = "kyantShapes" }
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
 shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
+osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

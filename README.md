@@ -11,9 +11,8 @@ Pensado para el **Motorola Edge 70 con Android 16**. Funciona en cualquier Andro
 </div>
 
 > [!IMPORTANT]
-> **Versión 0.1, sin compilar todavía.** El código se escribió en un entorno sin acceso al Android SDK, así que
-> esta versión **nunca se ha compilado ni probado en un teléfono**. Lo normal es que la primera compilación dé
-> algún error pequeño. Si te pasa, abre un *issue* con el mensaje.
+> **Versión 0.1: compila, pero aún no se ha probado en un teléfono.** Si algo falla al abrirla, abre un *issue*
+> con lo que pasó.
 >
 > Las imágenes de abajo son **maquetas del diseño**, no capturas reales. Se cambiarán por capturas del Edge 70
 > en cuanto la app funcione.
@@ -119,5 +118,11 @@ Shizuku. Las apps que UAD-ng marca como *Expert* o *Unsafe* no aparecen nunca.
 - [Shizuku API](https://github.com/RikkaApps/Shizuku-API): Apache 2.0.
 - Fuente Inter: SIL Open Font License ([`LICENSE-Inter-OFL.txt`](LICENSE-Inter-OFL.txt)).
 - No se usa ningún recurso de Apple: ni iconos, ni SF Symbols, ni SF Pro, ni fondos.
+
+## EdgeOS Car
+
+En [`car/`](car/README.md) hay un segundo launcher, para **radios Android de coche** (la k80_bsp y parecidas):
+velocidad por GPS, mapa o panel de conducción, música, accesos rápidos y una pantalla para optimizar la radio y
+desactivar servicios innecesarios sin root.
 
 Inspirado en [Free My TV](https://github.com/simbasjungles/free-my-tv).

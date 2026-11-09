@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Vidrio"
 include(":app")
+include(":car")

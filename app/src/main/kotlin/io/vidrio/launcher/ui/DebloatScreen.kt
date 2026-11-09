@@ -264,7 +264,7 @@ private fun Check(on: Boolean) {
 
 @Composable
 private fun ShizukuCard(status: Shell.Status, backdrop: Backdrop, context: Context) {
-    val (text, button, action): Triple<String, String, () -> Unit> = when (status) {
+    val card: Triple<String, String, () -> Unit> = when (status) {
         Shell.Status.NotInstalled -> Triple(
             "Para desactivar apps sin PC ni root, Vidrio usa Shizuku. Instálalo primero (es gratis y de código abierto).",
             "Instalar Shizuku",
@@ -291,6 +291,7 @@ private fun ShizukuCard(status: Shell.Status, backdrop: Backdrop, context: Conte
             { Shizuku.requestPermission(Shell.PERMISSION_REQUEST) },
         )
     }
+    val (text, button, action) = card
     Column(
         Modifier
             .fillMaxWidth()

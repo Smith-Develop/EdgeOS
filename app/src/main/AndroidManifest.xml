@@ -48,7 +48,6 @@
             android:launchMode="singleTask"
             android:stateNotNeeded="true"
             android:clearTaskOnLaunch="true"
-            android:resumeWhilePaused="true"
             android:excludeFromRecents="true"
             android:screenOrientation="nosensor"
             android:windowSoftInputMode="adjustResize"

@@ -8,12 +8,11 @@ hacer tú: los toques en el teléfono y las decisiones. Habla en español, corto
 paso que cambie algo en su ordenador (instalar herramientas) o en su teléfono (instalar, desactivar apps, cambiar el
 inicio), di qué vas a hacer y espera su "sí".
 
-## Estado: la primera compilación es tuya
+## Estado: compila, sin probar en un teléfono
 
-El código (versión 0.1) se escribió en un entorno sin acceso al Android SDK: **nunca se ha compilado**. Lo primero
-es que `./gradlew assembleDebug` termine con `BUILD SUCCESSFUL`. Cuando falle, lee el error, corrige el código y
-vuelve a compilar, sin pedirle nada a la persona: es trabajo tuyo, no suyo. Cuéntale solo el resultado ("ya
-compila, había 3 errores pequeños").
+La versión 0.1 compila (`./gradlew assembleDebug` termina en `BUILD SUCCESSFUL`) pero aún no ha funcionado en un
+teléfono real. Si algo falla al compilar o al abrirla, lee el error, corrige el código y vuelve a intentarlo, sin
+pedirle nada a la persona: es trabajo tuyo, no suyo. Cuéntale solo el resultado ("ya va, había 2 errores pequeños").
 
 - Las versiones de `gradle/libs.versions.toml` son las mismas con las que compila
   [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass), la librería del vidrio: AGP 9.3.2,
@@ -135,3 +134,27 @@ fondo, por si hay algo que no quiere publicar.
 - Nunca subas `local.properties`, `*.keystore`, `*.jks` ni claves.
 - Después de cada cambio, `./gradlew assembleDebug` debe terminar en `BUILD SUCCESSFUL`.
 - Haz commits cuando algo funcione, con mensajes en español. Pregunta antes de hacer `git push`.
+
+## EdgeOS Car: la radio del coche
+
+`car/` es otro launcher, para radios Android de coche (ver [`car/README.md`](car/README.md)). Pensado para la
+**k80_bsp**: MediaTek MT6580, Mali-400, 1024×600 y **Android 8.1 de verdad**, aunque la radio diga Android 12.
+Kotlin con vistas clásicas, sin Compose ni AndroidX, `minSdk 26`. Se diseña sobre 1024×600 y `Ui.px()` escala.
+
+- Compilar: `./gradlew :car:assembleDebug` → `car/build/outputs/apk/debug/car-debug.apk`.
+- **La radio (lo hace la persona):** Ajustes → Acerca de → 7 toques en *Número de compilación* → Opciones de
+  desarrollador → *Depuración USB*. Algunas radios esconden Ajustes: si no aparece, una app como *Activity
+  Launcher* abre `com.android.settings/.Settings$DevelopmentSettingsActivity`. Cable USB-A a USB-A o el puerto
+  USB de la radio con un adaptador OTG, o ADB por Wi-Fi si la radio lo trae (`adb connect <ip>:5555`).
+- Instalar: `adb install -r car/build/outputs/apk/debug/car-debug.apk`; abrir con
+  `adb shell am start -n io.edgeos.car/.HomeActivity`. Pídele que acepte el permiso de ubicación.
+- **Nunca desactives el launcher de fábrica** ni nada del coche. Antes de tocar nada, guarda el estado:
+  `adb shell pm list packages -d > antes-desactivados.txt` y `adb shell pm list packages -s > antes-sistema.txt`.
+- Shizuku en Android 8 (sin depuración inalámbrica): instálalo con su permiso y arráncalo con
+  `adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh`. Si la radio tiene root
+  (`adb shell su -c id`), Shizuku puede arrancar solo en modo root.
+- Servicios: que los elija la persona en EdgeOS Car → Sistema. Si te pide hacerlo desde el ordenador, enséñale
+  primero la lista con lo que hace cada uno, usa solo `pm disable-user --user 0` y deja un `deshacer.sh` con los
+  `pm enable --user 0` correspondientes. `Optimizer.isCarRelated` y `Optimizer.HEAD_UNIT` son la referencia de lo
+  que nunca y de lo que sí.
+- Capturas reales: `adb exec-out screencap -p > car/docs/<nombre>.png`.

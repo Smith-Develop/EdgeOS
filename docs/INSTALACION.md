@@ -6,8 +6,8 @@ mismos, aunque algunos menús cambian de nombre.
 Tiempo: unos 30 minutos la primera vez, casi todo esperando a que Android Studio descargue lo que necesita.
 
 > [!NOTE]
-> La versión 0.1 aún no se ha compilado nunca (ver el [README](../README.md)). Si algún paso falla con un
-> error de compilación, copia el mensaje en un *issue*.
+> La versión 0.1 compila, pero aún no se ha probado en un teléfono (ver el [README](../README.md)). Si algún paso
+> falla, copia el mensaje en un *issue*.
 
 > [!TIP]
 > **¿Prefieres que lo haga Claude Code?** Clona el repo, ejecuta `claude` dentro de la carpeta y dile
