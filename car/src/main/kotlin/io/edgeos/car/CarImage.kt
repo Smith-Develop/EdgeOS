@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Environment
 import java.io.File
 import java.io.InputStream
 
@@ -15,12 +14,22 @@ import java.io.InputStream
 object CarImage {
     const val DEFAULT = R.drawable.car_default
     private const val MAX_HEIGHT = 1200
-    val NAMES = listOf("coche.png", "coche.webp", "coche.jpg", "coche.jpeg")
 
     private fun file(context: Context) = File(context.filesDir, "car.png")
 
-    /** La del usuario, o null para la de serie. */
-    fun load(context: Context): Bitmap? = file(context).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
+    /** Qué se cargó la última vez (de serie, la tuya o un error), para el diagnóstico de Sistema. */
+    @Volatile
+    var status = "sin cargar"
+        private set
+
+    /** La del usuario si hay, y si no la de serie. Llamar fuera del hilo principal. */
+    fun load(context: Context): Bitmap? {
+        val own = file(context).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
+        if (own != null) return own.also { status = "la tuya" }
+        val stock = runCatching { BitmapFactory.decodeResource(context.resources, DEFAULT) }.getOrNull()
+        status = if (stock != null) "la de serie" else "error: no se pudo leer la de serie"
+        return stock
+    }
 
     fun reset(context: Context) {
         file(context).delete()
@@ -43,15 +52,5 @@ object CarImage {
         tmp.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it); it.fd.sync() }
         tmp.renameTo(file(context))
         return bitmap
-    }
-
-    /**
-     * Para radios sin selector de archivos (algunas quitan DocumentsUI): busca "coche.png" en la raíz de la
-     * memoria interna y de las memorias USB/SD. Necesita el permiso de almacenamiento.
-     */
-    fun findOnStorage(): File? {
-        val roots = listOf(Environment.getExternalStorageDirectory()) +
-            (File("/storage").listFiles()?.toList() ?: emptyList()) + (File("/mnt/media_rw").listFiles()?.toList() ?: emptyList())
-        return roots.asSequence().flatMap { root -> NAMES.asSequence().map { File(root, it) } }.firstOrNull { it.canRead() }
     }
 }

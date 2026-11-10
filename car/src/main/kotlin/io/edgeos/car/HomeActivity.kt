@@ -16,12 +16,14 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
+import android.util.Log
 import io.edgeos.car.drive.Drive
 import io.edgeos.car.drive.Media
 import io.edgeos.car.system.Optimizer
 import io.edgeos.car.ui.AppsPage
 import io.edgeos.car.ui.CarCard
 import io.edgeos.car.ui.Glyph
+import io.edgeos.car.ui.ImagePicker
 import io.edgeos.car.ui.MapCard
 import io.edgeos.car.ui.MediaCard
 import io.edgeos.car.ui.PanelCard
@@ -62,6 +64,7 @@ class HomeActivity : Activity() {
     private var resumed = false
 
     private enum class Page { HOME, APPS, SYSTEM }
+    private var current = Page.HOME
 
     private val tick = object : Runnable {
         override fun run() {
@@ -78,29 +81,73 @@ class HomeActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Ui.init(this)
         Ui.fonts(this)
         prefs = Prefs(this)
         drive = Drive(applicationContext, prefs)
         media = Media(applicationContext)
         apps = Apps(applicationContext)
         optimizer = Optimizer(applicationContext, prefs)
-        setContentView(build())
-        Thread { CarImage.load(this)?.let { b -> main.post { carCard.setCar(b) } } }.start()
+
+        // La interfaz se construye con el tamaño REAL de la ventana, no con el de la pantalla: en radios que
+        // mantienen una barra del sistema, la ventana es más baja y con el de la pantalla no cabía todo (la
+        // imagen del coche, que se queda con el hueco sobrante, desaparecía). Si la ventana cambia, se rehace.
+        host = FrameLayout(this)
+        host.setBackgroundColor(Ui.BG)
+        setContentView(host)
+        host.addOnLayoutChangeListener { _, l, t, r, b, _, _, _, _ ->
+            val w = r - l
+            val h = b - t
+            if (w > 0 && h > 0 && (Math.abs(w - builtW) > 4 || Math.abs(h - builtH) > 4)) main.post { rebuild(w, h) }
+        }
 
         drive.listen { s ->
+            if (!built) return@listen
             carCard.update(s)
             mapCard?.update(s)
             panelCard?.update(s)
             topBar.gps(s.hasFix)
         }
-        media.onChange = { mediaCard.update(it, media.hasAccess()) }
-        apps.listen {
-            appsPage.set(apps.list)
-            quick.setApps(Slot.QUICK.map { apps.forSlot(it, prefs) })
-        }
+        media.onChange = { if (built) mediaCard.update(it, media.hasAccess()) }
+        apps.listen { if (built) showApps() }
         apps.start()
         askLocation()
+    }
+
+    private lateinit var host: FrameLayout
+    private var built = false
+    private var builtW = 0
+    private var builtH = 0
+
+    private fun rebuild(w: Int, h: Int) {
+        if (Math.abs(w - builtW) <= 4 && Math.abs(h - builtH) <= 4) return
+        Log.i(TAG, "ventana ${w}x$h (pantalla ${resources.displayMetrics.widthPixels}x${resources.displayMetrics.heightPixels})")
+        builtW = w
+        builtH = h
+        val page = if (built) current else Page.HOME
+        mapCard?.onPause()
+        host.removeAllViews()
+        Ui.init(w, h)
+        host.addView(build(), FrameLayout.LayoutParams(MATCH, MATCH))
+        built = true
+        show(page)
+        if (resumed) mapCard?.onResume()
+        loadCar()
+        drive.state.let { s -> carCard.update(s); mapCard?.update(s); panelCard?.update(s); topBar.gps(s.hasFix) }
+        mediaCard.update(media.now, media.hasAccess())
+        showApps()
+        main.removeCallbacks(tick)
+        main.post(tick)
+    }
+
+    private fun loadCar() = Thread {
+        val b = CarImage.load(this)
+        Log.i(TAG, "imagen del coche: ${CarImage.status} ${b?.width}x${b?.height}")
+        main.post { carCard.setCar(b) }
+    }.start()
+
+    private fun showApps() {
+        appsPage.set(apps.list)
+        quick.setApps(Slot.QUICK.map { apps.forSlot(it, prefs) })
     }
 
     private fun build(): View {
@@ -129,6 +176,7 @@ class HomeActivity : Activity() {
         home = Ui.row(this)
         home.gravity = Gravity.TOP
         carCard = CarCard(this)
+        carCard.car.setOnClickListener { pickCar() }
         home.addView(carCard, lp(px(250), MATCH))
         center = FrameLayout(this)
         home.addView(center, lp(0, MATCH, 1f).apply { marginStart = px(14); marginEnd = px(14) })
@@ -158,9 +206,10 @@ class HomeActivity : Activity() {
             onResetTrip = { drive.resetTrip() },
             onAskMediaAccess = ::askMediaAccess,
             onPickCar = ::pickCar,
+            carInfo = { "${CarImage.status}, ${carCard.car.describe()}" },
             onResetCar = {
                 CarImage.reset(this)
-                carCard.setCar(null)
+                loadCar()
                 Toast.makeText(this, "Imagen de serie.", Toast.LENGTH_SHORT).show()
             },
         )
@@ -170,6 +219,7 @@ class HomeActivity : Activity() {
     }
 
     private fun show(page: Page) {
+        current = page
         home.visibility = if (page == Page.HOME) View.VISIBLE else View.GONE
         appsPage.visibility = if (page == Page.APPS) View.VISIBLE else View.GONE
         systemPage.visibility = if (page == Page.SYSTEM) View.VISIBLE else View.GONE
@@ -239,31 +289,37 @@ class HomeActivity : Activity() {
 
     // MARK: imagen del coche
 
+    /** Primero el selector propio (muchas radios no traen gestor de archivos); el del sistema, como opción. */
     private fun pickCar() {
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), STORAGE)
+            return
+        }
+        Thread {
+            val files = runCatching { ImagePicker.find() }.getOrDefault(emptyList())
+            Log.i(TAG, "imágenes encontradas: ${files.size}")
+            main.post {
+                ImagePicker.show(this, files, onPick = { f ->
+                    Thread { applyCar(runCatching { CarImage.save(this, f) }.onFailure { Log.w(TAG, "no se pudo copiar $f", it) }.getOrNull()) }.start()
+                }, onSystem = ::systemPicker)
+            }
+        }.start()
+    }
+
+    private fun systemPicker() {
         val open = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
         val get = Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
         for (intent in listOf(open, get)) {
             if (runCatching { startActivityForResult(intent, PICK_CAR) }.isSuccess) return
         }
-        // Algunas radios no traen selector de archivos: se busca coche.png en la memoria USB.
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), STORAGE)
-        } else {
-            carFromStorage()
-        }
-    }
-
-    private fun carFromStorage() {
-        val file = CarImage.findOnStorage()
-            ?: return Toast.makeText(this, "Copia la imagen como coche.png en la raíz de una memoria USB, conéctala y vuelve a pulsar.", Toast.LENGTH_LONG).show()
-        Thread { applyCar(runCatching { CarImage.save(this, file) }.getOrNull()) }.start()
+        Toast.makeText(this, "Esta radio no tiene gestor de archivos: usa la lista de imágenes.", Toast.LENGTH_LONG).show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         val uri = data?.data
         if (requestCode != PICK_CAR || resultCode != RESULT_OK || uri == null) return
-        Thread { applyCar(runCatching { CarImage.save(this, uri) }.getOrNull()) }.start()
+        Thread { applyCar(runCatching { CarImage.save(this, uri) }.onFailure { Log.w(TAG, "no se pudo copiar $uri", it) }.getOrNull()) }.start()
     }
 
     private fun applyCar(bitmap: android.graphics.Bitmap?) = main.post {
@@ -295,8 +351,7 @@ class HomeActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) {
         if (requestCode == STORAGE) {
-            if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED) carFromStorage()
-            else Toast.makeText(this, "Sin permiso de almacenamiento no puedo leer la memoria USB.", Toast.LENGTH_LONG).show()
+            if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED) pickCar() else systemPicker()
             return
         }
         if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED && resumed) drive.start()
@@ -318,7 +373,7 @@ class HomeActivity : Activity() {
         drive.start()
         media.start()
         mapCard?.onResume()
-        main.post(tick)
+        if (built) main.post(tick)
         apps.refresh()
     }
 
@@ -339,16 +394,17 @@ class HomeActivity : Activity() {
     /** Inicio con el launcher delante: volver a la página principal. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.hasCategory(Intent.CATEGORY_HOME)) show(Page.HOME)
+        if (built && intent.hasCategory(Intent.CATEGORY_HOME)) show(Page.HOME)
     }
 
     private companion object {
+        const val TAG = "EdgeOSCar"
         const val PICK_CAR = 7
         const val STORAGE = 8
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (home.visibility != View.VISIBLE) show(Page.HOME)
+        if (built && current != Page.HOME) show(Page.HOME)
     }
 }

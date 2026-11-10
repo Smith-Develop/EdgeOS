@@ -91,16 +91,18 @@ sigue desactivado aunque el ADB esté cerrado.
 
 ### Poner la imagen de tu coche
 
-Sistema → **Imagen del coche** → *Elegir imagen…* abre el gestor de archivos de la radio. *Usar la de serie*
-vuelve a la de fábrica. Para crearla con IA (ChatGPT, Gemini, Copilot…), pide algo así:
+Toca el coche en Inicio, o ve a Sistema → **Imagen del coche** → *Elegir imagen…*: aparece la lista de imágenes
+de la radio y de las memorias USB, con miniatura (el gestor de archivos del sistema queda como opción, porque
+muchas radios no lo traen). *Usar la de serie* vuelve a la de fábrica. Debajo, "Ahora:" dice qué imagen se usa y
+a qué tamaño se dibuja, por si algo falla. Para crearla con IA (ChatGPT, Gemini, Copilot…), pide algo así:
 
 > Vista cenital exacta, desde arriba, de un [marca, modelo y color de tu coche], con el morro hacia arriba,
 > centrado y recto, sin perspectiva. Fondo blanco liso o transparente, sin sombras ni texto. Imagen vertical de
 > 600 × 1200 píxeles; el coche ocupa casi todo el alto.
 
 - **Medidas:** vertical, proporción 1:2 (600 × 1200 px es ideal). PNG con fondo transparente o blanco.
-- **Pasarla a la radio:** cópiala a una memoria USB y elígela. Si la radio no tiene gestor de archivos, llámala
-  **coche.png**, déjala en la raíz de la memoria y EdgeOS Car la encuentra sola (pide permiso de almacenamiento).
+- **Pasarla a la radio:** cópiala a una memoria USB (en la raíz, en Download o en Pictures), conéctala y elígela de
+  la lista. La primera vez pide permiso de almacenamiento.
 - Se copia dentro de la app: después puedes quitar la memoria USB.
 
 ## Volver atrás

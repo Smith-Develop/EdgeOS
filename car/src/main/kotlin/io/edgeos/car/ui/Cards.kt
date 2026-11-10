@@ -12,7 +12,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import io.edgeos.car.App
-import io.edgeos.car.CarImage
 import android.graphics.Bitmap
 import io.edgeos.car.drive.Drive
 import io.edgeos.car.drive.DriveState
@@ -48,7 +47,7 @@ class CarCard(context: Context) : LinearLayout(context) {
     private val speed = Ui.text(context, "0", 76f, Ui.TEXT, Ui.light, Gravity.CENTER)
     private val heading = Stat(context, "Rumbo", 18f)
     private val altitude = Stat(context, "Altitud", 18f)
-    private val car = ImageView(context)
+    val car = CarPicture(context)
     private var shown = -1
     private val speedTween = Tween { v ->
         val n = Math.round(v)
@@ -65,8 +64,6 @@ class CarCard(context: Context) : LinearLayout(context) {
         gps.setPadding(px(10), px(5), px(10), px(5))
         head.addView(gps)
         addView(head)
-        car.scaleType = ImageView.ScaleType.FIT_CENTER
-        car.setImageResource(CarImage.DEFAULT)
         addView(car, lp(MATCH, 0, 1f).apply { topMargin = px(8); bottomMargin = px(6) })
         addView(Ui.text(context, "Velocidad", 12f, Ui.TEXT2, gravity = Gravity.CENTER), lp(MATCH, WRAP))
         addView(speed, lp(MATCH, WRAP).apply { topMargin = px(2) })
@@ -80,10 +77,7 @@ class CarCard(context: Context) : LinearLayout(context) {
         addView(tiles, lp(MATCH, WRAP).apply { topMargin = px(12) })
     }
 
-    /** La imagen del usuario, o null para la de serie. */
-    fun setCar(bitmap: Bitmap?) {
-        if (bitmap != null) car.setImageBitmap(bitmap) else car.setImageResource(CarImage.DEFAULT)
-    }
+    fun setCar(bitmap: Bitmap?) = car.set(bitmap)
 
     fun update(s: DriveState) {
         gps.text = when {
@@ -298,4 +292,45 @@ fun button(context: Context, icon: GlyphDrawable, color: Int, onClick: () -> Uni
     v.background = icon
     addView(v, FrameLayout.LayoutParams(px(24), px(24), Gravity.CENTER))
     setOnClickListener { onClick() }
+}
+
+/**
+ * La imagen del coche. Se dibuja a mano, ya reducida al tamaño del hueco: en GPU antiguas (Mali-400) una imagen
+ * grande dentro de una tarjeta recortada puede no pintarse, y a su tamaño justo además gasta menos memoria.
+ * Sin imagen, dice qué hacer en vez de quedarse en blanco.
+ */
+class CarPicture(context: Context) : View(context) {
+    private var source: Bitmap? = null
+    private var fitted: Bitmap? = null
+    private val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+    private val hint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Ui.TEXT2; textAlign = Paint.Align.CENTER; typeface = Ui.medium }
+
+    fun set(bitmap: Bitmap?) {
+        source = bitmap
+        fitted = null
+        invalidate()
+    }
+
+    /** Para el diagnóstico de Sistema: tamaño del hueco y de la imagen. */
+    fun describe() = "hueco ${width}×$height, imagen ${source?.let { "${it.width}×${it.height}" } ?: "ninguna"}"
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        fitted = null
+    }
+
+    override fun onDraw(c: Canvas) {
+        val src = source
+        if (src == null || width <= 0 || height <= 0) {
+            hint.textSize = Ui.pxf(13f)
+            c.drawText("Toca para poner tu coche", width / 2f, height / 2f, hint)
+            return
+        }
+        val f = fitted ?: run {
+            val scale = minOf(width.toFloat() / src.width, height.toFloat() / src.height)
+            val w = (src.width * scale).toInt().coerceAtLeast(1)
+            val h = (src.height * scale).toInt().coerceAtLeast(1)
+            (if (w == src.width && h == src.height) src else Bitmap.createScaledBitmap(src, w, h, true)).also { fitted = it }
+        }
+        c.drawBitmap(f, (width - f.width) / 2f, (height - f.height) / 2f, paint)
+    }
 }

@@ -37,7 +37,9 @@ class SystemPage(
     private val onAskMediaAccess: () -> Unit,
     private val onPickCar: () -> Unit,
     private val onResetCar: () -> Unit,
+    private val carInfo: () -> String = { "" },
 ) : LinearLayout(context) {
+    private val carStatus = Ui.text(context, "", 12f, Ui.TEXT2).apply { maxLines = 2 }
     private val main = Handler(Looper.getMainLooper())
     private val work = Executors.newSingleThreadExecutor()
 
@@ -80,6 +82,7 @@ class SystemPage(
     }
 
     fun onShow() {
+        carStatus.text = "Ahora: ${carInfo()}"
         refreshStats()
         refreshServices()
     }
@@ -175,6 +178,7 @@ class SystemPage(
         buttons.addView(pick, lp(0, WRAP, 1f))
         buttons.addView(reset, lp(0, WRAP, 1f).apply { marginStart = px(10) })
         addView(buttons, lp(MATCH, WRAP).apply { topMargin = px(4) })
+        addView(carStatus, lp(MATCH, WRAP).apply { topMargin = px(8) })
 
         val guide = Ui.text(context, CAR_GUIDE, 12f, Ui.TEXT2).apply {
             maxLines = 40
@@ -370,7 +374,7 @@ class SystemPage(
             1. Pide a una IA de imágenes (ChatGPT, Gemini, Copilot…) algo así:
             «Vista cenital exacta, desde arriba, de un [marca, modelo y color de tu coche], con el morro hacia arriba, centrado y recto, sin perspectiva. Fondo blanco liso o transparente, sin sombras ni texto. Imagen vertical de 600 × 1200 píxeles; el coche ocupa casi todo el alto.»
             2. Medidas: vertical, proporción 1:2 (600 × 1200 px es ideal). PNG con fondo transparente o blanco.
-            3. Pásala a la radio: cópiala a una memoria USB (si la llamas coche.png, EdgeOS Car la encuentra sola), conéctala y pulsa «Elegir imagen…».
+            3. Pásala a la radio: cópiala a una memoria USB, conéctala y pulsa «Elegir imagen…»: aparecerá en la lista.
         """.trimIndent()
     }
 }

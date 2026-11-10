@@ -1,6 +1,5 @@
 package io.edgeos.car.ui
 
-import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Outline
@@ -24,13 +23,9 @@ import kotlin.math.roundToInt
 object Ui {
     private var k = 1f
 
-    @Suppress("DEPRECATION") // getRealMetrics es la única forma en Android 8.
-    fun init(activity: Activity) {
-        // La pantalla entera: el launcher va a pantalla completa, sin la barra del sistema.
-        val m = android.util.DisplayMetrics().also { activity.windowManager.defaultDisplay.getRealMetrics(it) }
-        val w = maxOf(m.widthPixels, m.heightPixels)
-        val h = minOf(m.widthPixels, m.heightPixels)
-        k = min(w / 1024f, h / 600f)
+    /** Con el tamaño real de la ventana del launcher (no el de la pantalla: puede haber barras del sistema). */
+    fun init(width: Int, height: Int) {
+        k = min(maxOf(width, height) / 1024f, minOf(width, height) / 600f)
     }
 
     fun px(v: Float): Int = (v * k).roundToInt()
