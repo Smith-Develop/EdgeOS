@@ -36,6 +36,14 @@ class Prefs(context: Context) {
         get() = sp.getStringSet("disabled", emptySet())!!.toSet()
         set(v) = sp.edit().putStringSet("disabled", v).apply()
 
+    /** Botones del volante aprendidos (ver keys/Keys.kt). */
+    var keyIds: Set<String>
+        get() = sp.getStringSet("key_ids", emptySet())!!.toSet()
+        set(v) = sp.edit().putStringSet("key_ids", v).apply()
+    fun keyAction(id: String, long: Boolean): String? = sp.getString("key_${id}_${if (long) "long" else "short"}", null)
+    fun setKeyAction(id: String, long: Boolean, action: String?) =
+        sp.edit().putString("key_${id}_${if (long) "long" else "short"}", action).apply()
+
     /** Escalas de animación antes de "Animaciones rápidas", para devolverlas. */
     var savedAnimScales: String?
         get() = sp.getString("anim_scales", null)

@@ -16,6 +16,10 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import io.edgeos.car.Prefs
+import io.edgeos.car.keys.KeyAction
+import io.edgeos.car.keys.KeyService
+import io.edgeos.car.keys.Keys
+import android.app.AlertDialog
 import io.edgeos.car.system.Optimizer
 import io.edgeos.car.system.Service
 import io.edgeos.car.system.Shell
@@ -74,6 +78,7 @@ class SystemPage(
         left.addView(stateCard())
         left.addView(quickCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(settingsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(keysCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(carCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         val scroll = ScrollView(context).apply { isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(px(2), 0, px(2), px(4)) }
         scroll.addView(left)
@@ -81,7 +86,128 @@ class SystemPage(
         addView(servicesCard(), lp(0, MATCH, 0.58f).apply { marginStart = px(14) })
     }
 
+    // MARK: botones del volante
+
+    private val keysStatus = Ui.text(context, "", 12f, Ui.TEXT2).apply { maxLines = 4 }
+    private val keysActivate = Ui.text(context, "Activar el servicio", 14f, Ui.ACCENT, Ui.medium)
+    private val keysList = Ui.column(context)
+
+    private fun keysCard() = card("Botones del volante").apply {
+        addView(keysStatus)
+        keysActivate.setPadding(0, px(10), 0, px(4))
+        keysActivate.setOnClickListener { activateKeys() }
+        addView(keysActivate)
+        val learn = Ui.text(context, "Aprender un botón", 14f, android.graphics.Color.WHITE, Ui.semibold, Gravity.CENTER)
+        learn.background = Ui.pressable(Ui.INK, 12f)
+        learn.setPadding(0, px(12), 0, px(12))
+        learn.setOnClickListener { learnKey() }
+        addView(learn, lp(MATCH, WRAP).apply { topMargin = px(8) })
+        addView(keysList, lp(MATCH, WRAP).apply { topMargin = px(6) })
+        if (factoryKeys() != null) addView(link("Aprendizaje de botones de fábrica") { openFactoryKeys() })
+    }
+
+    /**
+     * En radios Reglink (como la k80_bsp) los botones del volante van por el microcontrolador a los servicios del
+     * fabricante y no llegan a Android como teclas: se aprenden en su herramienta (com.reglink.keystudy).
+     */
+    private fun factoryKeys(): Intent? {
+        val pm = context.packageManager
+        val byAction = Intent("com.reglink.action.keystudy")
+        if (pm.queryIntentActivities(byAction, 0).isNotEmpty()) return byAction
+        return FACTORY_KEYS.firstNotNullOfOrNull { pm.getLaunchIntentForPackage(it) }
+    }
+
+    private fun openFactoryKeys() {
+        factoryKeys()?.let { open(it) } ?: toast("Esta radio no trae herramienta de fábrica para los botones.")
+    }
+
+    private fun refreshKeys() {
+        val on = Keys.serviceEnabled(context)
+        keysStatus.text = if (on) "Pulsa \"Aprender un botón\", pulsa el botón del volante y elige qué hace al pulsarlo y al mantenerlo."
+            else "Para aprender los botones hay que activar el servicio \"Botones del volante de EdgeOS Car\". Solo ve las teclas: no lee la pantalla."
+        keysActivate.visibility = if (on) View.GONE else View.VISIBLE
+        keysList.removeAllViews()
+        for (id in Keys.learned(prefs)) {
+            val row = Ui.row(context)
+            row.setPadding(0, px(8), 0, px(8))
+            val texts = Ui.column(context)
+            texts.addView(Ui.text(context, Keys.name(id), 14f, Ui.TEXT, Ui.medium))
+            val long = Keys.long(prefs, id)
+            texts.addView(Ui.text(context, (Keys.short(prefs, id)?.title ?: "—") + (long?.let { " · mantener: ${it.title}" } ?: ""), 12f, Ui.TEXT2))
+            row.addView(texts, lp(0, WRAP, 1f))
+            val forget = Ui.text(context, "Quitar", 13f, Ui.DANGER, Ui.medium)
+            forget.setPadding(px(10), px(6), 0, px(6))
+            forget.setOnClickListener { Keys.forget(prefs, id); refreshKeys() }
+            row.addView(forget)
+            keysList.addView(row)
+        }
+    }
+
+    /** Con acceso al sistema se activa solo; si no, se abre Ajustes → Accesibilidad. */
+    private fun activateKeys() {
+        work.execute {
+            Shell.connect(context) {}
+            val ok = runCatching { Keys.enableWithShell(context) }.getOrDefault(false)
+            main.postDelayed({
+                if (!ok || !Keys.serviceEnabled(context)) {
+                    toast("Activa \"Botones del volante de EdgeOS Car\" y vuelve.")
+                    open(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                }
+                refreshKeys()
+            }, 600)
+        }
+    }
+
+    private fun learnKey() {
+        if (KeyService.instance == null) return activateKeys()
+        val wait = AlertDialog.Builder(context)
+            .setTitle("Pulsa el botón del volante")
+            .setMessage("Pulsa una vez el botón que quieres enseñar a EdgeOS Car.")
+            .setNegativeButton("Cancelar", null)
+            .setOnDismissListener { KeyService.learning = null }
+            .create()
+        KeyService.learning = { id ->
+            wait.setOnDismissListener(null)
+            wait.dismiss()
+            chooseActions(id)
+        }
+        wait.show()
+        // Si en 10 s no llega nada, ese botón no pasa por Android: se configura en la herramienta de fábrica.
+        main.postDelayed({
+            if (!wait.isShowing) return@postDelayed
+            wait.dismiss()
+            val factory = factoryKeys()
+            AlertDialog.Builder(context)
+                .setTitle("No llegó ningún botón")
+                .setMessage("Tu radio no envía ese botón a Android: lo gestiona su microcontrolador. " +
+                    (if (factory != null) "Asígnale la acción en el aprendizaje de botones de fábrica." else "Configúralo en el menú de fábrica de la radio."))
+                .apply { if (factory != null) setPositiveButton("Abrir el de fábrica") { _, _ -> open(factory) } }
+                .setNegativeButton("Cerrar", null)
+                .show()
+        }, 10_000)
+    }
+
+    private fun chooseActions(id: String) {
+        val shorts = KeyAction.entries.filter { it != KeyAction.NONE }
+        AlertDialog.Builder(context)
+            .setTitle("${Keys.name(id)}: al pulsarlo")
+            .setItems(shorts.map { it.title }.toTypedArray()) { _, i ->
+                val longs = listOf(KeyAction.NONE) + shorts
+                AlertDialog.Builder(context)
+                    .setTitle("${Keys.name(id)}: al mantenerlo")
+                    .setItems(longs.map { if (it == KeyAction.NONE) "Nada (solo pulsar)" else it.title }.toTypedArray()) { _, j ->
+                        Keys.save(prefs, id, shorts[i], longs[j])
+                        refreshKeys()
+                        toast("Aprendido: ${Keys.name(id)}")
+                    }
+                    .show()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
     fun onShow() {
+        refreshKeys()
         carStatus.text = "Ahora: ${carInfo()}"
         refreshStats()
         refreshServices()
@@ -370,6 +496,7 @@ class SystemPage(
     private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
 
     private companion object {
+        val FACTORY_KEYS = listOf("com.reglink.keystudy", "com.syu.steer", "com.microntek.controlsettings", "com.fyt.steer")
         val CAR_GUIDE = """
             1. Pide a una IA de imágenes (ChatGPT, Gemini, Copilot…) algo así:
             «Vista cenital exacta, desde arriba, de un [marca, modelo y color de tu coche], con el morro hacia arriba, centrado y recto, sin perspectiva. Fondo blanco liso o transparente, sin sombras ni texto. Imagen vertical de 600 × 1200 píxeles; el coche ocupa casi todo el alto.»

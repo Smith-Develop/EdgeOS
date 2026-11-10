@@ -75,11 +75,7 @@ class Apps(private val context: Context) {
      * La app de cada acceso rápido: la que eligió el usuario o, si no, la primera cuyo paquete o nombre
      * encaja. Las radios chinas usan nombres muy dispares (com.syu.radio, com.android.fmradio, "收音机"…).
      */
-    fun forSlot(slot: Slot, prefs: Prefs): App? =
-        find(prefs.app(slot.key)) ?: list.firstOrNull { app ->
-            val text = (app.component.packageName + " " + app.label).lowercase()
-            slot.hints.any { text.contains(it) }
-        }
+    fun forSlot(slot: Slot, prefs: Prefs): App? = find(prefs.app(slot.key)) ?: slot.match(list) { it.component.packageName + " " + it.label }
 
     fun openNavigation() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -89,13 +85,20 @@ class Apps(private val context: Context) {
 
 enum class Slot(val key: String, val title: String, val hints: List<String>) {
     // Las radios no traen Android Auto de Google: traen una app receptora que lo proyecta (y suele hacer CarPlay).
-    AUTO("auto", "Android Auto", listOf("zlink", "autokit", "carlink", "tlink", "androidauto", "android auto", "carplay",
+    AUTO("auto", "Android Auto", listOf("yellow.android.aasink", "zlink", "autokit", "carlink", "tlink", "androidauto", "android auto", "carplay",
         "headunit", "easyconnect", "carbit", "phonelink", "smartlink", "screenlink", "boxtovideo", "cplay", "auto play")),
-    RADIO("radio", "Radio", listOf("fmradio", ".radio", "radio", " fm", "收音")),
+    RADIO("radio", "Radio", listOf("com.reglink.apps.radio", "fmradio", ".radio", "radio", " fm", "收音")),
     PHONE("phone", "Teléfono", listOf("bluetooth", ".bt", "btphone", "dialer", "phone", "teléfono", "telefono", "蓝牙")),
     MUSIC("music", "Música", listOf("music", "música", "musica", "player", "音乐")),
     NAV("nav", "Navegar", listOf("waze", "maps", "navi", "osmand", "sygic", "here")),
     ;
+
+    /** La primera app que encaja, por orden de pistas: la más concreta (la de fábrica) gana a las genéricas. */
+    fun <T> match(items: List<T>, text: (T) -> String): T? {
+        val lowered = items.map { it to text(it).lowercase() }
+        for (hint in hints) lowered.firstOrNull { it.second.contains(hint) }?.let { return it.first }
+        return null
+    }
 
     companion object {
         /** Los cuatro accesos rápidos de Inicio, en orden. Música ya tiene su tarjeta y su botón en la barra. */

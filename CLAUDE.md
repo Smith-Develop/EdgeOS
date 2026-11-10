@@ -181,3 +181,23 @@ Con el informe, decide:
   adaptador OBD2 ELM327 por Bluetooth (en un Ford Focus Mk2, con conmutador HS/MS-CAN: puertas y luces van por
   el MS-CAN). El "entrenamiento" es escuchar el CAN mientras la persona abre una puerta o enciende las luces y
   ver qué bytes cambian.
+
+
+### Lo que se sabe de la radio (informe del 10-11-2026, k80_bsp de Reglink)
+
+- **Pantalla 1280×720**, densidad 160 (no 1024×600). Firmware `CMENZX80-U1_R8010_S1.28`, plataforma **Reglink**.
+  SELinux **permisivo**. Sin root permanente (hay MTK Easy SU y Magisk instalados).
+- **Radio FM**: chip FM del propio MT6580 (`fmradio_drv.ko`, banda 87,5–108,0, paso 50 kHz). El **motor** es
+  `com.reglink.apps.mtkradio` (uid de sistema, usa `libfmjni.so` sobre `/dev/fm`); `com.reglink.apps.radio` es solo
+  la pantalla. `/dev/fm` es `crw-rw-rw-`. `com.reglink.apps.serviceui/.receiver.KTVReceiver` recibe
+  `com.action.ACTION_OPEN_RADIO`, `ACTION_CLOSE_RADIO` y `ACTION_SET_RADIO_FREQUENCE` (extras sin confirmar).
+  Siguiente paso: `tools/extraer-apks-radio.sh <ip>` y descompilar (jadx) radio, mtkradio y serviceui para ver cómo
+  se piden las emisoras; con eso, una pantalla de radio propia en EdgeOS Car. No escribas en `/dev/fm` a ciegas.
+- **Botones del volante**: no llegan a Android (`getevent` vacío al pulsarlos; aparece una ventana de
+  `com.reglink.apps.serviceui`). Van por el MCU a los servicios de Reglink (`reglink.rot_key_learn`) y se aprenden en
+  `com.reglink.keystudy`. EdgeOS Car → Sistema → Botones del volante enlaza a esa herramienta; el aprendizaje propio
+  (`keys/KeyService.kt`) solo sirve para botones que sí lleguen como teclas.
+- **CAN-bus**: no hay caja configurada (`car.brand = No CAN`). `com.reglink.vehicleinfo` trae perfiles de caja por
+  marca, **incluido Ford** (`xinchi.ford`): con una caja Xinchi para Ford conectada, los datos del coche llegarían
+  por ahí. Sin caja, el camino es un ELM327 por Bluetooth.
+- Android Auto/CarPlay: `yellow.android.aasink` y `yellow.android.carplay.receiver`.

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">EdgeOS Car</string>
+    <string name="key_service_name">Botones del volante de EdgeOS Car</string>
+    <string name="key_service_description">Recibe los botones del volante que hayas enseñado a EdgeOS Car y hace la acción que elegiste. Solo ve esas teclas: no lee la pantalla ni lo que escribes.</string>
 </resources>
