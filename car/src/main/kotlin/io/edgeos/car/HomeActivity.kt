@@ -4,6 +4,12 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.app.DownloadManager
+import io.edgeos.car.maps.Maps
+import io.edgeos.car.ui.MapsUi
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -127,6 +133,7 @@ class HomeActivity : Activity() {
         apps.listen { if (built) showApps() }
         apps.start()
         askLocation()
+        registerReceiver(mapDone, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
     }
 
     private lateinit var host: FrameLayout
@@ -155,6 +162,7 @@ class HomeActivity : Activity() {
         builtH = h
         val page = if (built) current else Page.HOME
         mapCard?.onPause()
+        mapCard?.release()
         host.removeAllViews()
         Ui.init(w, h)
         host.addView(build(), FrameLayout.LayoutParams(MATCH, MATCH))
@@ -255,6 +263,7 @@ class HomeActivity : Activity() {
             },
             onCarChanged = ::drawCar,
             onThemeChanged = ::applyTheme,
+            onMapsChanged = { if (prefs.showMap) showCenter() },
         )
         musicPage = MusicPage(this, media, player,
             hasStorage = { checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED },
@@ -283,10 +292,12 @@ class HomeActivity : Activity() {
     private fun showCenter() {
         center.removeAllViews()
         mapCard?.onPause()
+        mapCard?.release()
         mapCard = null
         panelCard = null
         if (prefs.showMap) {
-            mapCard = MapCard(this) { openSlot(Slot.NAV) }.also { center.addView(it) }
+            mapCard = MapCard(this, { openSlot(Slot.NAV) }, Maps.installed(this), onGetMaps = { MapsUi.offerMadrid(this) })
+                .also { center.addView(it) }
             if (resumed) mapCard?.onResume()
         } else {
             panelCard = PanelCard(this) { drive.resetTrip() }.also { center.addView(it) }
@@ -444,7 +455,17 @@ class HomeActivity : Activity() {
         super.onPause()
     }
 
+    /** Al terminar de bajarse un mapa, el mapa de Inicio pasa a dibujarse sin conexión. */
+    private val mapDone = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (!built) return
+            if (prefs.showMap) showCenter()
+            systemPage.refreshMaps()
+        }
+    }
+
     override fun onDestroy() {
+        runCatching { unregisterReceiver(mapDone) }
         player.release()
         apps.stop()
         super.onDestroy()

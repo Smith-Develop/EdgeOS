@@ -32,4 +32,7 @@ android {
 
 dependencies {
     implementation(libs.osmdroid)
+    // Mapas vectoriales sin conexión (archivos .map de Mapsforge), dibujados en la radio.
+    implementation(libs.osmdroid.mapsforge)
+    testImplementation("junit:junit:4.13.2")
 }

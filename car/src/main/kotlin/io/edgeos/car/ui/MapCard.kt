@@ -18,7 +18,11 @@ import io.edgeos.car.ui.Ui.MATCH
 import io.edgeos.car.ui.Ui.WRAP
 import io.edgeos.car.ui.Ui.lp
 import io.edgeos.car.ui.Ui.px
+import android.app.Application
 import org.osmdroid.config.Configuration
+import org.osmdroid.mapsforge.MapsForgeTileProvider
+import org.osmdroid.mapsforge.MapsForgeTileSource
+import org.osmdroid.tileprovider.util.SimpleRegisterReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
@@ -61,7 +65,15 @@ private class PositionOverlay : Overlay() {
  * ya vistas quedan en caché (hasta 300 MB) y se ven sin conexión.
  */
 @SuppressLint("ClickableViewAccessibility")
-class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
+class MapCard(
+    context: Context,
+    onNavigate: () -> Unit,
+    /** Mapas .map descargados: si hay, el mapa se dibuja sin conexión con ellos. */
+    offline: List<File> = emptyList(),
+    /** Pulsar "Descargar mapa sin conexión" (solo aparece si no hay ninguno). */
+    onGetMaps: (() -> Unit)? = null,
+) : FrameLayout(context) {
+    private var offlineSource: MapsForgeTileSource? = null
     private val map: MapView
     private val position = PositionOverlay()
     private var following = true
@@ -86,7 +98,21 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
             tileFileSystemThreads = 4
         }
         map = MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            if (offline.isNotEmpty()) {
+                // Sin conexión: la radio dibuja los mapas vectoriales; no hace falta internet.
+                val source = runCatching {
+                    MapsForgeTileSource.createInstance(context.applicationContext as Application)
+                    MapsForgeTileSource.createFromFiles(offline.toTypedArray())
+                }.getOrNull()
+                if (source != null) {
+                    offlineSource = source
+                    tileProvider = MapsForgeTileProvider(SimpleRegisterReceiver(context), source, null)
+                } else {
+                    setTileSource(TileSourceFactory.MAPNIK)
+                }
+            } else {
+                setTileSource(TileSourceFactory.MAPNIK)
+            }
             setMultiTouchControls(true)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             isTilesScaledToDpi = true
@@ -113,6 +139,16 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
             }
         }
         addView(map, LayoutParams(MATCH, MATCH))
+
+        // Sin mapas descargados: invitación a bajarlos (el mapa sigue funcionando con internet).
+        if (offlineSource == null && onGetMaps != null) {
+            val chip = Ui.text(context, "Descargar mapa sin conexión", 13f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
+            chip.background = Ui.pressable(Ui.CARD, 14f)
+            chip.elevation = Ui.pxf(2f)
+            chip.setPadding(px(14), px(10), px(14), px(10))
+            chip.setOnClickListener { onGetMaps() }
+            addView(chip, LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = px(14) })
+        }
 
         // "Navegar": abre Google Maps, Waze u otra app de rutas.
         val nav = Ui.row(context)
@@ -200,6 +236,12 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
     }
 
     fun onResume() = map.onResume()
+    /** Al quitar la tarjeta: libera los mapas abiertos. */
+    fun release() {
+        map.onDetach()
+        offlineSource?.dispose()
+    }
+
     fun onPause() {
         glide.stop()
         map.onPause()

@@ -37,8 +37,8 @@ Sistema muestra "layoutlib" en vez del modelo y deja la memoria en blanco, cosas
 - **Modo oscuro** para todo, mapa incluido: *Claro*, *Oscuro* o *Automático* (cambia solo al amanecer y al
   atardecer de donde estés), en Sistema → Ajustes → Tema.
 - **En el centro, a elegir** en Sistema → Ajustes:
-  - **Mapa** de OpenStreetMap en gris claro, con tu posición, zoom, recentrar y el botón **Navegar** (abre Google
-    Maps, Waze u otra). Necesita internet para las zonas nuevas; las ya vistas se guardan para verlas sin conexión.
+  - **Mapa** de OpenStreetMap en gris claro (u oscuro), con tu posición, zoom, recentrar y el botón **Navegar** (abre
+    Google Maps, Waze u otra). **Sin internet** con los mapas descargados (ver abajo); sin ellos, va por internet.
   - **Panel** de conducción, sin internet: velocímetro de aguja, distancia, tiempo en marcha, media y máxima.
 - **Música**: carátula, título y artista de lo que suena, con anterior, reproducir/pausa y siguiente. Al tocarla se
   abre la pantalla **Música** (ver abajo).
@@ -124,6 +124,19 @@ memorias USB, con miniatura; *Volver al dibujo* deshace. Para crearla con IA (Ch
   la lista. La primera vez pide permiso de almacenamiento.
 - Se copia dentro de la app: después puedes quitar la memoria USB.
 
+### Mapas sin conexión
+
+Sistema → **Mapas sin conexión**:
+- **Comunidad de Madrid**: un toque. Si el servidor no la tiene por separado, ofrece España entera, indicando
+  cuánto ocupa y cuánto espacio libre queda.
+- **Otros mapas…**: recorre el catálogo (continente → país → región) y baja los que quieras.
+- Se bajan con el gestor de descargas de Android (sigue aunque cambies de pantalla; mejor con Wi-Fi). Al terminar, el
+  mapa de Inicio pasa a dibujarse **en la radio, sin internet**. Cada mapa se puede borrar.
+
+Son mapas vectoriales de [Mapsforge](https://github.com/mapsforge/mapsforge) con datos de
+[OpenStreetMap](https://www.openstreetmap.org/copyright) (© colaboradores de OpenStreetMap, ODbL), del servidor
+`download.mapsforge.org`. La radio consulta su catálogo, así que se adapta a las regiones que haya.
+
 ## Volver atrás
 
 - Sistema → **Restaurar todo**. Sin EdgeOS Car: `adb shell pm enable <paquete>`.
@@ -155,4 +168,6 @@ diseña sobre 1024×600 y se escala a la pantalla real (`ui/Ui.kt`).
 | `system/Shell.kt`, `system/LocalAdb.kt` | Acceso al sistema: root o el ADB de la propia radio (cliente adaptado de Free My TV, MIT). |
 | `ui/Tween.kt` | Lleva velocidad, aguja y mapa al nuevo dato fotograma a fotograma: el GPS da uno por segundo. |
 | `CarImage.kt` | La imagen del coche: la de serie o la del usuario, copiada a la memoria de la app. |
+| `maps/Maps.kt`, `ui/MapsUi.kt` | Mapas sin conexión: catálogo, descargas y diálogos. |
+| `music/` | Biblioteca de canciones y reproductor propio. |
 | `ui/` | Tarjetas, mapa, iconos y páginas. |

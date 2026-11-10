@@ -16,6 +16,7 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import io.edgeos.car.Prefs
+import io.edgeos.car.maps.Maps
 import io.edgeos.car.keys.KeyAction
 import io.edgeos.car.keys.KeyService
 import io.edgeos.car.keys.Keys
@@ -43,6 +44,7 @@ class SystemPage(
     private val onResetCar: () -> Unit,
     private val onCarChanged: () -> Unit = {},
     private val onThemeChanged: () -> Unit = {},
+    private val onMapsChanged: () -> Unit = {},
 ) : LinearLayout(context) {
     private val carStatus = Ui.text(context, "", 12f, Ui.TEXT2).apply { maxLines = 2 }
     private val main = Handler(Looper.getMainLooper())
@@ -73,6 +75,61 @@ class SystemPage(
     }
 
 
+
+    // MARK: mapas sin conexión
+
+    private val mapsList = Ui.column(context)
+
+    private fun mapsCard() = card("Mapas sin conexión").apply {
+        addView(Ui.text(context, "Con un mapa descargado, el mapa de Inicio funciona sin internet y se ve igual en claro y en oscuro.", 12f, Ui.TEXT2).apply { maxLines = 3; ellipsize = null })
+        addView(mapsList, lp(MATCH, WRAP).apply { topMargin = px(6) })
+        val buttons = Ui.row(context)
+        val madrid = Ui.text(context, "Comunidad de Madrid", 14f, Ui.ON_INK, Ui.semibold, Gravity.CENTER)
+        madrid.background = Ui.pressable(Ui.INK, 12f)
+        madrid.setPadding(px(6), px(12), px(6), px(12))
+        madrid.setOnClickListener { MapsUi.offerMadrid(context); main.postDelayed({ refreshMaps() }, 4000) }
+        val others = Ui.text(context, "Otros mapas…", 14f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
+        others.background = Ui.pressable(Ui.TILE, 12f)
+        others.setPadding(px(6), px(12), px(6), px(12))
+        others.setOnClickListener { MapsUi.browse(context) }
+        buttons.addView(madrid, lp(0, WRAP, 1f))
+        buttons.addView(others, lp(0, WRAP, 1f).apply { marginStart = px(10) })
+        addView(buttons, lp(MATCH, WRAP).apply { topMargin = px(10) })
+    }
+
+    /** Lo descargado y lo que se está bajando; mientras haya descargas, se repite cada segundo. */
+    fun refreshMaps() {
+        mapsList.removeAllViews()
+        val downloads = Maps.downloads(context)
+        val installed = Maps.installed(context)
+        for (d in downloads) {
+            val pct = if (d.progress < 0) "empezando…" else "${(d.progress * 100).toInt()} %"
+            mapsList.addView(mapRow("${d.name.removeSuffix(".map")}: bajando, $pct", "Cancelar") {
+                Maps.cancel(context, d.id)
+                refreshMaps()
+            })
+        }
+        for (f in installed) {
+            val size = String.format(Locale.forLanguageTag("es"), "%.0f MB", f.length() / 1e6)
+            mapsList.addView(mapRow("${f.name.removeSuffix(".map").replaceFirstChar { it.uppercase() }} · $size", "Borrar") {
+                Ui.dialog(context).setTitle("¿Borrar ${f.name.removeSuffix(".map")}?")
+                    .setMessage("El mapa dejará de verse sin internet en esa zona.")
+                    .setPositiveButton("Borrar") { _, _ -> Maps.delete(f); onMapsChanged(); refreshMaps() }
+                    .setNegativeButton("Cancelar", null).show()
+            })
+        }
+        if (downloads.isEmpty() && installed.isEmpty()) mapsList.addView(Ui.text(context, "Aún no hay mapas descargados.", 13f, Ui.TEXT2).apply { setPadding(0, px(8), 0, px(4)) })
+        if (downloads.isNotEmpty()) main.postDelayed({ if (isShown) refreshMaps() }, 1000)
+    }
+
+    private fun mapRow(text: String, action: String, onAction: () -> Unit) = Ui.row(context).apply {
+        setPadding(0, px(8), 0, px(8))
+        addView(Ui.text(context, text, 14f, Ui.TEXT, Ui.medium), lp(0, WRAP, 1f))
+        val a = Ui.text(context, action, 13f, Ui.DANGER, Ui.medium)
+        a.setPadding(px(10), px(6), 0, px(6))
+        a.setOnClickListener { onAction() }
+        addView(a)
+    }
 
     // MARK: botones del volante
 
@@ -195,6 +252,7 @@ class SystemPage(
     }
 
     fun onShow() {
+        refreshMaps()
         refreshKeys()
         refreshPreview()
         paintChips()
@@ -594,6 +652,7 @@ class SystemPage(
         left.addView(stateCard())
         left.addView(quickCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(settingsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(mapsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(keysCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(carCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         val scroll = ScrollView(context).apply { isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(px(2), 0, px(2), px(4)) }
