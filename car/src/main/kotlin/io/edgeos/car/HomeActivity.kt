@@ -86,6 +86,7 @@ class HomeActivity : Activity() {
         apps = Apps(applicationContext)
         optimizer = Optimizer(applicationContext, prefs)
         setContentView(build())
+        Thread { CarImage.load(this)?.let { b -> main.post { carCard.setCar(b) } } }.start()
 
         drive.listen { s ->
             carCard.update(s)
@@ -116,7 +117,8 @@ class HomeActivity : Activity() {
         root.addView(rail, lp(px(84), MATCH))
 
         val content = Ui.column(this)
-        content.setPadding(0, 0, px(16), px(16))
+        // Mismo margen a los dos lados: las tarjetas no se pegan a la barra lateral.
+        content.setPadding(px(16), 0, px(16), px(16))
         topBar = TopBar(this)
         content.addView(topBar, lp(MATCH, px(52)))
         pages = FrameLayout(this)
@@ -155,6 +157,12 @@ class HomeActivity : Activity() {
             onShowMap = { showCenter() },
             onResetTrip = { drive.resetTrip() },
             onAskMediaAccess = ::askMediaAccess,
+            onPickCar = ::pickCar,
+            onResetCar = {
+                CarImage.reset(this)
+                carCard.setCar(null)
+                Toast.makeText(this, "Imagen de serie.", Toast.LENGTH_SHORT).show()
+            },
         )
         for (v in listOf(home, appsPage, systemPage)) pages.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
         show(Page.HOME)
@@ -229,6 +237,56 @@ class HomeActivity : Activity() {
             .onFailure { Toast.makeText(this, "Esta radio no tiene ese ajuste.", Toast.LENGTH_LONG).show() }
     }
 
+    // MARK: imagen del coche
+
+    private fun pickCar() {
+        val open = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
+        val get = Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
+        for (intent in listOf(open, get)) {
+            if (runCatching { startActivityForResult(intent, PICK_CAR) }.isSuccess) return
+        }
+        // Algunas radios no traen selector de archivos: se busca coche.png en la memoria USB.
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), STORAGE)
+        } else {
+            carFromStorage()
+        }
+    }
+
+    private fun carFromStorage() {
+        val file = CarImage.findOnStorage()
+            ?: return Toast.makeText(this, "Copia la imagen como coche.png en la raíz de una memoria USB, conéctala y vuelve a pulsar.", Toast.LENGTH_LONG).show()
+        Thread { applyCar(runCatching { CarImage.save(this, file) }.getOrNull()) }.start()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val uri = data?.data
+        if (requestCode != PICK_CAR || resultCode != RESULT_OK || uri == null) return
+        Thread { applyCar(runCatching { CarImage.save(this, uri) }.getOrNull()) }.start()
+    }
+
+    private fun applyCar(bitmap: android.graphics.Bitmap?) = main.post {
+        if (bitmap == null) return@post Toast.makeText(this, "No se pudo leer esa imagen.", Toast.LENGTH_LONG).show()
+        carCard.setCar(bitmap)
+        Toast.makeText(this, "Imagen del coche cambiada.", Toast.LENGTH_SHORT).show()
+    }
+
+    // MARK: pantalla completa
+
+    /** Sin barra de estado ni de navegación; deslizando desde el borde aparecen un momento y se vuelven a ocultar. */
+    @Suppress("DEPRECATION")
+    private fun immersive() {
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) immersive()
+    }
+
     private fun askLocation() {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 1)
@@ -236,6 +294,11 @@ class HomeActivity : Activity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) {
+        if (requestCode == STORAGE) {
+            if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED) carFromStorage()
+            else Toast.makeText(this, "Sin permiso de almacenamiento no puedo leer la memoria USB.", Toast.LENGTH_LONG).show()
+            return
+        }
         if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED && resumed) drive.start()
         else if (results.isNotEmpty()) Toast.makeText(this, "Sin permiso de ubicación no hay velocidad.", Toast.LENGTH_LONG).show()
     }
@@ -250,6 +313,7 @@ class HomeActivity : Activity() {
     // ubicación en segundo plano; para contar el viaje siempre haría falta un servicio en primer plano.
     override fun onResume() {
         super.onResume()
+        immersive()
         resumed = true
         drive.start()
         media.start()
@@ -276,6 +340,11 @@ class HomeActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.hasCategory(Intent.CATEGORY_HOME)) show(Page.HOME)
+    }
+
+    private companion object {
+        const val PICK_CAR = 7
+        const val STORAGE = 8
     }
 
     @Deprecated("Deprecated in Java")

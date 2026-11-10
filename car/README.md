@@ -29,7 +29,8 @@ Sistema muestra "layoutlib" en vez del modelo y deja la memoria en blanco, cosas
 ## Qué tiene
 
 **Inicio**
-- **Mi coche**: un coche dibujado visto desde arriba, la **velocidad por GPS** en grande, el rumbo y la altitud.
+- **Mi coche**: tu coche visto desde arriba, la **velocidad por GPS** en grande, el rumbo y la altitud. La imagen
+  se cambia en Sistema → *Imagen del coche* (ver abajo).
 - **En el centro, a elegir** en Sistema → Ajustes:
   - **Mapa** de OpenStreetMap en gris claro, con tu posición, zoom, recentrar y el botón **Navegar** (abre Google
     Maps, Waze u otra). Necesita internet para las zonas nuevas; las ya vistas se guardan para verlas sin conexión.
@@ -88,6 +89,20 @@ Si la radio no tiene el ADB por red abierto (el puerto 5555), se abre una vez de
 conectada por USB: `adb tcpip 5555`. En muchas radios hay que repetirlo tras cada arranque. Lo que ya desactivaste
 sigue desactivado aunque el ADB esté cerrado.
 
+### Poner la imagen de tu coche
+
+Sistema → **Imagen del coche** → *Elegir imagen…* abre el gestor de archivos de la radio. *Usar la de serie*
+vuelve a la de fábrica. Para crearla con IA (ChatGPT, Gemini, Copilot…), pide algo así:
+
+> Vista cenital exacta, desde arriba, de un [marca, modelo y color de tu coche], con el morro hacia arriba,
+> centrado y recto, sin perspectiva. Fondo blanco liso o transparente, sin sombras ni texto. Imagen vertical de
+> 600 × 1200 píxeles; el coche ocupa casi todo el alto.
+
+- **Medidas:** vertical, proporción 1:2 (600 × 1200 px es ideal). PNG con fondo transparente o blanco.
+- **Pasarla a la radio:** cópiala a una memoria USB y elígela. Si la radio no tiene gestor de archivos, llámala
+  **coche.png**, déjala en la raíz de la memoria y EdgeOS Car la encuentra sola (pide permiso de almacenamiento).
+- Se copia dentro de la app: después puedes quitar la memoria USB.
+
 ## Volver atrás
 
 - Sistema → **Restaurar todo**. Sin EdgeOS Car: `adb shell pm enable <paquete>`.
@@ -104,6 +119,8 @@ sigue desactivado aunque el ADB esté cerrado.
 
 ## Cómo está hecho
 
+Va a **pantalla completa**: sin barra de estado ni de navegación (deslizando desde el borde aparecen un momento).
+
 Kotlin con vistas clásicas de Android, sin Compose ni AndroidX: en un Mali-400 cada milisegundo cuenta. Todo se
 diseña sobre 1024×600 y se escala a la pantalla real (`ui/Ui.kt`).
 
@@ -116,4 +133,5 @@ diseña sobre 1024×600 y se escala a la pantalla real (`ui/Ui.kt`).
 | `system/Optimizer.kt` | Servicios innecesarios, filtro de lo del coche, memoria, animaciones. |
 | `system/Shell.kt`, `system/LocalAdb.kt` | Acceso al sistema: root o el ADB de la propia radio (cliente adaptado de Free My TV, MIT). |
 | `ui/Tween.kt` | Lleva velocidad, aguja y mapa al nuevo dato fotograma a fotograma: el GPS da uno por segundo. |
-| `ui/` | Tarjetas, mapa, coche, iconos y páginas. |
+| `CarImage.kt` | La imagen del coche: la de serie o la del usuario, copiada a la memoria de la app. |
+| `ui/` | Tarjetas, mapa, iconos y páginas. |

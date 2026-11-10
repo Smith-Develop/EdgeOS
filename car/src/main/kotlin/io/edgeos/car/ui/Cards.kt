@@ -12,6 +12,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import io.edgeos.car.App
+import io.edgeos.car.CarImage
+import android.graphics.Bitmap
 import io.edgeos.car.drive.Drive
 import io.edgeos.car.drive.DriveState
 import io.edgeos.car.drive.NowPlaying
@@ -46,6 +48,7 @@ class CarCard(context: Context) : LinearLayout(context) {
     private val speed = Ui.text(context, "0", 76f, Ui.TEXT, Ui.light, Gravity.CENTER)
     private val heading = Stat(context, "Rumbo", 18f)
     private val altitude = Stat(context, "Altitud", 18f)
+    private val car = ImageView(context)
     private var shown = -1
     private val speedTween = Tween { v ->
         val n = Math.round(v)
@@ -62,7 +65,9 @@ class CarCard(context: Context) : LinearLayout(context) {
         gps.setPadding(px(10), px(5), px(10), px(5))
         head.addView(gps)
         addView(head)
-        addView(CarView(context), lp(MATCH, 0, 1f).apply { topMargin = px(6); bottomMargin = px(4) })
+        car.scaleType = ImageView.ScaleType.FIT_CENTER
+        car.setImageResource(CarImage.DEFAULT)
+        addView(car, lp(MATCH, 0, 1f).apply { topMargin = px(8); bottomMargin = px(6) })
         addView(Ui.text(context, "Velocidad", 12f, Ui.TEXT2, gravity = Gravity.CENTER), lp(MATCH, WRAP))
         addView(speed, lp(MATCH, WRAP).apply { topMargin = px(2) })
         addView(Ui.text(context, "km/h", 13f, Ui.TEXT2, gravity = Gravity.CENTER), lp(MATCH, WRAP))
@@ -73,6 +78,11 @@ class CarCard(context: Context) : LinearLayout(context) {
             tiles.addView(s, lp(0, WRAP, 1f).apply { if (s === altitude) marginStart = px(10) })
         }
         addView(tiles, lp(MATCH, WRAP).apply { topMargin = px(12) })
+    }
+
+    /** La imagen del usuario, o null para la de serie. */
+    fun setCar(bitmap: Bitmap?) {
+        if (bitmap != null) car.setImageBitmap(bitmap) else car.setImageResource(CarImage.DEFAULT)
     }
 
     fun update(s: DriveState) {

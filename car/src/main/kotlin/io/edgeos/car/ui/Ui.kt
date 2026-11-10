@@ -24,8 +24,10 @@ import kotlin.math.roundToInt
 object Ui {
     private var k = 1f
 
+    @Suppress("DEPRECATION") // getRealMetrics es la única forma en Android 8.
     fun init(activity: Activity) {
-        val m = activity.resources.displayMetrics
+        // La pantalla entera: el launcher va a pantalla completa, sin la barra del sistema.
+        val m = android.util.DisplayMetrics().also { activity.windowManager.defaultDisplay.getRealMetrics(it) }
         val w = maxOf(m.widthPixels, m.heightPixels)
         val h = minOf(m.widthPixels, m.heightPixels)
         k = min(w / 1024f, h / 600f)

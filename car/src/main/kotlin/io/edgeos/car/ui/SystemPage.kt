@@ -35,6 +35,8 @@ class SystemPage(
     private val onShowMap: (Boolean) -> Unit,
     private val onResetTrip: () -> Unit,
     private val onAskMediaAccess: () -> Unit,
+    private val onPickCar: () -> Unit,
+    private val onResetCar: () -> Unit,
 ) : LinearLayout(context) {
     private val main = Handler(Looper.getMainLooper())
     private val work = Executors.newSingleThreadExecutor()
@@ -70,6 +72,7 @@ class SystemPage(
         left.addView(stateCard())
         left.addView(quickCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(settingsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(carCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         val scroll = ScrollView(context).apply { isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(px(2), 0, px(2), px(4)) }
         scroll.addView(left)
         addView(scroll, lp(0, MATCH, 0.42f))
@@ -157,6 +160,33 @@ class SystemPage(
         addView(link("Pantalla de inicio predeterminada") {
             open(Intent(android.provider.Settings.ACTION_HOME_SETTINGS))
         })
+    }
+
+    private fun carCard() = card("Imagen del coche").apply {
+        val buttons = Ui.row(context)
+        val pick = Ui.text(context, "Elegir imagen…", 14f, android.graphics.Color.WHITE, Ui.semibold, Gravity.CENTER)
+        pick.background = Ui.pressable(Ui.INK, 12f)
+        pick.setPadding(0, px(12), 0, px(12))
+        pick.setOnClickListener { onPickCar() }
+        val reset = Ui.text(context, "Usar la de serie", 14f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
+        reset.background = Ui.pressable(Ui.TILE, 12f)
+        reset.setPadding(0, px(12), 0, px(12))
+        reset.setOnClickListener { onResetCar() }
+        buttons.addView(pick, lp(0, WRAP, 1f))
+        buttons.addView(reset, lp(0, WRAP, 1f).apply { marginStart = px(10) })
+        addView(buttons, lp(MATCH, WRAP).apply { topMargin = px(4) })
+
+        val guide = Ui.text(context, CAR_GUIDE, 12f, Ui.TEXT2).apply {
+            maxLines = 40
+            ellipsize = null
+            setLineSpacing(0f, 1.25f)
+        }
+        val box = Ui.column(context)
+        box.background = Ui.rounded(Ui.TILE, 12f)
+        box.setPadding(px(14), px(12), px(14), px(12))
+        box.addView(Ui.text(context, "Cómo crear la tuya con IA", 13f, Ui.TEXT, Ui.semibold))
+        box.addView(guide, lp(MATCH, WRAP).apply { topMargin = px(6) })
+        addView(box, lp(MATCH, WRAP).apply { topMargin = px(12) })
     }
 
     private fun link(text: String, action: () -> Unit) = Ui.text(context, text, 14f, Ui.ACCENT, Ui.medium).apply {
@@ -334,4 +364,13 @@ class SystemPage(
     }
 
     private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+
+    private companion object {
+        val CAR_GUIDE = """
+            1. Pide a una IA de imágenes (ChatGPT, Gemini, Copilot…) algo así:
+            «Vista cenital exacta, desde arriba, de un [marca, modelo y color de tu coche], con el morro hacia arriba, centrado y recto, sin perspectiva. Fondo blanco liso o transparente, sin sombras ni texto. Imagen vertical de 600 × 1200 píxeles; el coche ocupa casi todo el alto.»
+            2. Medidas: vertical, proporción 1:2 (600 × 1200 px es ideal). PNG con fondo transparente o blanco.
+            3. Pásala a la radio: cópiala a una memoria USB (si la llamas coche.png, EdgeOS Car la encuentra sola), conéctala y pulsa «Elegir imagen…».
+        """.trimIndent()
+    }
 }
