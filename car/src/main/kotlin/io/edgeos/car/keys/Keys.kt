@@ -24,7 +24,7 @@ enum class KeyAction(val title: String) {
     AUTO("Abrir Android Auto"),
     RADIO("Abrir la radio"),
     PHONE("Abrir el teléfono"),
-    MUSIC("Abrir la música"),
+    MUSIC("Abrir Música de EdgeOS"),
     NAV("Abrir el navegador"),
     NONE("Nada"),
 }
@@ -82,7 +82,7 @@ object Keys {
             KeyAction.AUTO -> open(context, prefs, Slot.AUTO)
             KeyAction.RADIO -> open(context, prefs, Slot.RADIO)
             KeyAction.PHONE -> open(context, prefs, Slot.PHONE)
-            KeyAction.MUSIC -> open(context, prefs, Slot.MUSIC)
+            KeyAction.MUSIC -> start(context, Intent(context, HomeActivity::class.java).putExtra(HomeActivity.EXTRA_PAGE, "music"))
             KeyAction.NAV -> open(context, prefs, Slot.NAV)
             KeyAction.NONE -> {}
         }

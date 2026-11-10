@@ -28,6 +28,8 @@ import io.edgeos.car.ui.Glyph
 import io.edgeos.car.ui.ImagePicker
 import io.edgeos.car.ui.MapCard
 import io.edgeos.car.ui.MediaCard
+import io.edgeos.car.ui.MusicPage
+import io.edgeos.car.music.LocalPlayer
 import io.edgeos.car.ui.PanelCard
 import io.edgeos.car.ui.QuickCard
 import io.edgeos.car.ui.Rail
@@ -54,6 +56,8 @@ class HomeActivity : Activity() {
     private lateinit var center: FrameLayout
     private lateinit var appsPage: AppsPage
     private lateinit var systemPage: SystemPage
+    private lateinit var musicPage: MusicPage
+    private lateinit var player: LocalPlayer
     private lateinit var carCard: CarCard
     private lateinit var mediaCard: MediaCard
     private lateinit var quick: QuickCard
@@ -65,7 +69,7 @@ class HomeActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
     private var resumed = false
 
-    private enum class Page { HOME, APPS, SYSTEM }
+    private enum class Page { HOME, APPS, MUSIC, SYSTEM }
     private var current = Page.HOME
 
     private val tick = object : Runnable {
@@ -89,6 +93,8 @@ class HomeActivity : Activity() {
         prefs = Prefs(this)
         drive = Drive(applicationContext, prefs)
         media = Media(applicationContext)
+        player = LocalPlayer(applicationContext)
+        media.local = player.controller
         apps = Apps(applicationContext)
         optimizer = Optimizer(applicationContext, prefs)
 
@@ -112,7 +118,12 @@ class HomeActivity : Activity() {
             panelCard?.update(s)
             topBar.gps(s.hasFix)
         }
-        media.onChange = { if (built) mediaCard.update(it, media.hasAccess()) }
+        media.onChange = {
+            if (built) {
+                mediaCard.update(it, media.hasAccess())
+                musicPage.update(it)
+            }
+        }
         apps.listen { if (built) showApps() }
         apps.start()
         askLocation()
@@ -153,6 +164,7 @@ class HomeActivity : Activity() {
         loadCar()
         drive.state.let { s -> carCard.update(s); mapCard?.update(s); panelCard?.update(s); topBar.gps(s.hasFix) }
         mediaCard.update(media.now, media.hasAccess())
+        musicPage.update(media.now)
         showApps()
         main.removeCallbacks(tick)
         main.post(tick)
@@ -188,7 +200,7 @@ class HomeActivity : Activity() {
         rail.item(Glyph.APPS, Page.APPS) { show(Page.APPS) }
         rail.item(Glyph.AUTO) { openSlot(Slot.AUTO) }
         rail.item(Glyph.PHONE) { openSlot(Slot.PHONE) }
-        rail.item(Glyph.MUSIC) { openSlot(Slot.MUSIC) }
+        rail.item(Glyph.MUSIC, Page.MUSIC) { show(Page.MUSIC) }
         rail.spacer()
         rail.item(Glyph.SYSTEM, Page.SYSTEM) { show(Page.SYSTEM) }
         root.addView(rail, lp(px(84), MATCH))
@@ -244,7 +256,14 @@ class HomeActivity : Activity() {
             onCarChanged = ::drawCar,
             onThemeChanged = ::applyTheme,
         )
-        for (v in listOf(home, appsPage, systemPage)) pages.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
+        musicPage = MusicPage(this, media, player,
+            hasStorage = { checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED },
+            askStorage = { requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), MUSIC_STORAGE) },
+            openApp = { pkg -> packageManager.getLaunchIntentForPackage(pkg)?.let { runCatching { startActivity(it) } } },
+        )
+        // Tocar la tarjeta de música de Inicio abre la pantalla Música.
+        mediaCard.setOnClickListener { show(Page.MUSIC) }
+        for (v in listOf(home, appsPage, musicPage, systemPage)) pages.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
         show(Page.HOME)
         return root
     }
@@ -254,6 +273,8 @@ class HomeActivity : Activity() {
         home.visibility = if (page == Page.HOME) View.VISIBLE else View.GONE
         appsPage.visibility = if (page == Page.APPS) View.VISIBLE else View.GONE
         systemPage.visibility = if (page == Page.SYSTEM) View.VISIBLE else View.GONE
+        musicPage.visibility = if (page == Page.MUSIC) View.VISIBLE else View.GONE
+        if (page == Page.MUSIC) musicPage.onShow()
         rail.select(page)
         if (page == Page.SYSTEM) systemPage.onShow()
     }
@@ -383,6 +404,10 @@ class HomeActivity : Activity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) {
+        if (requestCode == MUSIC_STORAGE) {
+            musicPage.scan(force = true)
+            return
+        }
         if (requestCode == STORAGE) {
             if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED) pickCar() else systemPicker()
             return
@@ -420,6 +445,7 @@ class HomeActivity : Activity() {
     }
 
     override fun onDestroy() {
+        player.release()
         apps.stop()
         super.onDestroy()
     }
@@ -427,13 +453,17 @@ class HomeActivity : Activity() {
     /** Inicio con el launcher delante: volver a la página principal. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (built && intent.hasCategory(Intent.CATEGORY_HOME)) show(Page.HOME)
+        if (!built) return
+        if (intent.getStringExtra(EXTRA_PAGE) == "music") show(Page.MUSIC)
+        else if (intent.hasCategory(Intent.CATEGORY_HOME)) show(Page.HOME)
     }
 
-    private companion object {
-        const val TAG = "EdgeOSCar"
-        const val PICK_CAR = 7
-        const val STORAGE = 8
+    companion object {
+        const val EXTRA_PAGE = "page"
+        private const val TAG = "EdgeOSCar"
+        private const val PICK_CAR = 7
+        private const val STORAGE = 8
+        private const val MUSIC_STORAGE = 9
     }
 
     @Deprecated("Deprecated in Java")

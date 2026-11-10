@@ -40,13 +40,24 @@ Sistema muestra "layoutlib" en vez del modelo y deja la memoria en blanco, cosas
   - **Mapa** de OpenStreetMap en gris claro, con tu posición, zoom, recentrar y el botón **Navegar** (abre Google
     Maps, Waze u otra). Necesita internet para las zonas nuevas; las ya vistas se guardan para verlas sin conexión.
   - **Panel** de conducción, sin internet: velocímetro de aguja, distancia, tiempo en marcha, media y máxima.
-- **Música**: carátula, título y artista de lo que suena (también la radio FM, si la publica), con anterior,
-  reproducir/pausa y siguiente.
+- **Música**: carátula, título y artista de lo que suena, con anterior, reproducir/pausa y siguiente. Al tocarla se
+  abre la pantalla **Música** (ver abajo).
 - **Android Auto**: un botón en la barra lateral y un acceso rápido que abren la app de proyección de la radio
   (Zlink, AutoKit, Carlinkit, TLink…), que es la que muestra Android Auto y CarPlay. Si no la encuentra sola, te
   deja elegirla.
 - **Accesos rápidos**: Android Auto, Radio, Teléfono y Navegar. Cada uno busca solo la app adecuada de tu radio;
   mantenlo pulsado para elegir otra.
+
+**Música** (botón de la barra lateral, o tocar la tarjeta de Inicio): una sola pantalla para **cualquier fuente**,
+sin abrir la app de cada una.
+- **Ahora suena**: carátula grande, título, artista y álbum, barra de progreso fluida (se arrastra para saltar si
+  la fuente lo permite) y controles. Arriba, las **fuentes** activas (Bluetooth del móvil, Spotify, TuneIn, Radios de
+  España, Android Auto…): toca una para controlarla; *Abrir la app* lleva a la suya.
+- **Mis canciones**: reproductor propio para la música de la radio y de las **memorias USB** (MP3, M4A, FLAC, OGG,
+  WAV…), con carátulas. Se controla también con los botones del volante y el Bluetooth del coche, y se pausa solo
+  durante las llamadas y los avisos del navegador.
+
+<img src="docs/musica.png" width="640" alt="La pantalla Música: lo que suena con su carátula y controles, y la lista de canciones">
 
 **Apps**: todas las apps de la radio. Mantener pulsada una: información o usarla para un acceso rápido.
 
