@@ -18,9 +18,10 @@ if [ -n "$IP" ]; then
 fi
 adb get-state >/dev/null 2>&1 || { echo "No hay radio conectada." >&2; exit 1; }
 
-# Radio FM (pantalla, motor y receptor de órdenes), botones del volante, CAN-bus y servicios de Reglink.
+# Radio FM (pantalla, motor y receptor de órdenes), volante, CAN-bus, servicios, Bluetooth (llamadas) y música.
 for pkg in com.reglink.apps.radio com.reglink.apps.mtkradio com.android.fmradio com.reglink.apps.serviceui \
-           com.reglink.keystudy com.reglink.vehicleinfo com.reglink.services com.reglink.apps.settings; do
+           com.reglink.keystudy com.reglink.vehicleinfo com.reglink.services com.reglink.apps.settings \
+           com.reglink.apps.bluetooth com.reglink.bluetoothservice com.reglink.apps.music; do
     path=$(adb shell pm path "$pkg" 2>/dev/null | tr -d '\r' | sed -n 's/^package://p' | head -1)
     if [ -z "$path" ]; then echo "  (no está) $pkg"; continue; fi
     adb pull "$path" "$OUT/$pkg.apk" >/dev/null && echo "  copiado $pkg"
