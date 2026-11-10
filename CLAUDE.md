@@ -162,3 +162,22 @@ Kotlin con vistas clásicas, sin Compose ni AndroidX, `minSdk 26`. Se diseña so
   `pm enable --user 0` correspondientes. `Optimizer.isCarRelated` y `Optimizer.HEAD_UNIT` son la referencia de lo
   que nunca y de lo que sí.
 - Capturas reales: `adb exec-out screencap -p > car/docs/<nombre>.png`.
+
+### Próximas funciones: empieza investigando la radio
+
+La persona quiere que EdgeOS Car sea un ecosistema: **radio FM propia**, **aprender las teclas del volante** y
+**datos del coche** (puertas, luces, gasolina…), con un modo entrenamiento. Todo depende del hardware de su radio,
+así que lo primero es **`tools/inspeccionar-radio.sh <ip>`**: solo lee, y deja `informe-radio-*/` y un `.tar.gz`.
+Al final pide dos pruebas con la radio delante (pulsar los botones del volante y cambiar de emisora): avísale.
+Con el informe, decide:
+
+- **Radio FM:** qué app de fábrica la controla (`05-apps-del-coche-detalle.txt`, `30-radio-logcat.txt`) y cómo
+  habla con el sintonizador: servicio del fabricante (`06-servicios.txt`), puerto serie del MCU (`08-hardware.txt`,
+  `/dev/ttyMT*`, `/dev/ttyS*`), intents o broadcasts en el logcat. Replica eso; no escribas al MCU a ciegas.
+- **Volante:** si `20-volante-getevent.txt` tiene `EV_KEY` al pulsar, llegan como teclas de Android y se pueden
+  aprender en la app (un servicio de accesibilidad las recibe aunque haya otra app delante). Si no hay eventos,
+  van por el MCU: mira el logcat de esa prueba y el menú de fábrica del volante (SWC).
+- **Datos del coche:** caja CAN-bus si hay apps o servicios tipo canbus/Raise/Hiworld/Simple Soft; si no, un
+  adaptador OBD2 ELM327 por Bluetooth (en un Ford Focus Mk2, con conmutador HS/MS-CAN: puertas y luces van por
+  el MS-CAN). El "entrenamiento" es escuchar el CAN mientras la persona abre una puerta o enciende las luces y
+  ver qué bytes cambian.
