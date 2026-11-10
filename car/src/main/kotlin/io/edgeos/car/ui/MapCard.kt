@@ -80,6 +80,10 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
             osmdroidTileCache = File(context.cacheDir, "tiles")
             tileFileSystemCacheMaxBytes = 300L * 1024 * 1024
             tileFileSystemCacheTrimBytes = 250L * 1024 * 1024
+            // Más teselas en memoria y más descargas a la vez: menos huecos al moverse.
+            cacheMapTileCount = 64
+            tileDownloadThreads = 4
+            tileFileSystemThreads = 4
         }
         map = MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
@@ -93,6 +97,10 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
             val m = ColorMatrix().apply { setSaturation(0.12f) }
             m.postConcat(ColorMatrix(floatArrayOf(1.05f, 0f, 0f, 0f, 8f, 0f, 1.05f, 0f, 0f, 8f, 0f, 0f, 1.05f, 0f, 10f, 0f, 0f, 0f, 1f, 0f)))
             overlayManager.tilesOverlay.setColorFilter(ColorMatrixColorFilter(m))
+            // Mientras carga una tesela, del color del mapa en vez de la cuadrícula gris de osmdroid.
+            overlayManager.tilesOverlay.loadingBackgroundColor = LOADING
+            overlayManager.tilesOverlay.loadingLineColor = LOADING
+            setBackgroundColor(LOADING)
             overlays.add(position)
             setOnTouchListener { _, e ->
                 if (e.actionMasked == MotionEvent.ACTION_MOVE && following) {
@@ -144,18 +152,44 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
     }
 
     private fun recenterNow() {
-        position.point?.let { map.controller.animateTo(it) }
+        position.point?.let { map.controller.setCenter(it) }
         recenter.visibility = View.GONE
     }
 
+    // Entre dos posiciones del GPS (una por segundo) el coche avanza en línea recta, fotograma a fotograma: el
+    // mapa se desliza en vez de saltar. Las animaciones de osmdroid (animateTo) se pisaban unas a otras.
+    private var fromLat = 0.0
+    private var fromLon = 0.0
+    private var toLat = 0.0
+    private var toLon = 0.0
+    private var fromBearing = 0f
+    private var toBearing = 0f
+    private var lastFix = 0L
+    private val glide = Tween { t ->
+        val p = GeoPoint(fromLat + (toLat - fromLat) * t, fromLon + (toLon - fromLon) * t)
+        position.point = p
+        position.bearing = fromBearing + ((toBearing - fromBearing + 540f) % 360f - 180f) * t
+        if (following) map.controller.setCenter(p) else map.invalidate()
+    }
+
     fun update(s: DriveState) {
-        s.location?.let { loc ->
-            val p = GeoPoint(loc.latitude, loc.longitude)
-            val first = position.point == null
-            position.point = p
-            position.bearing = s.bearing ?: 0f
-            if (first) map.controller.setCenter(p) else if (following) map.controller.animateTo(p)
-            map.invalidate()
+        val loc = s.location
+        if (loc != null && (loc.latitude != toLat || loc.longitude != toLon)) {
+            val now = android.os.SystemClock.uptimeMillis()
+            val current = position.point
+            if (current == null) {
+                toLat = loc.latitude; toLon = loc.longitude
+                position.point = GeoPoint(toLat, toLon)
+                map.controller.setCenter(position.point)
+            } else {
+                fromLat = current.latitude; fromLon = current.longitude
+                toLat = loc.latitude; toLon = loc.longitude
+                fromBearing = position.bearing
+                toBearing = s.bearing ?: fromBearing
+                glide.snap(0f)
+                glide.to(1f, if (lastFix == 0L) 1000 else (now - lastFix).coerceIn(300, 1500))
+            }
+            lastFix = now
         }
         distance.set("${fmtKm(s.tripKm)} km")
         time.set(fmtTime(s.tripSeconds))
@@ -164,5 +198,12 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
     }
 
     fun onResume() = map.onResume()
-    fun onPause() = map.onPause()
+    fun onPause() {
+        glide.stop()
+        map.onPause()
+    }
+
+    private companion object {
+        val LOADING = Color.parseColor("#EEF0F3")
+    }
 }

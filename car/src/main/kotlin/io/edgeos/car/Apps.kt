@@ -88,8 +88,17 @@ class Apps(private val context: Context) {
 }
 
 enum class Slot(val key: String, val title: String, val hints: List<String>) {
+    // Las radios no traen Android Auto de Google: traen una app receptora que lo proyecta (y suele hacer CarPlay).
+    AUTO("auto", "Android Auto", listOf("zlink", "autokit", "carlink", "tlink", "androidauto", "android auto", "carplay",
+        "headunit", "easyconnect", "carbit", "phonelink", "smartlink", "screenlink", "boxtovideo", "cplay", "auto play")),
     RADIO("radio", "Radio", listOf("fmradio", ".radio", "radio", " fm", "收音")),
     PHONE("phone", "Teléfono", listOf("bluetooth", ".bt", "btphone", "dialer", "phone", "teléfono", "telefono", "蓝牙")),
     MUSIC("music", "Música", listOf("music", "música", "musica", "player", "音乐")),
     NAV("nav", "Navegar", listOf("waze", "maps", "navi", "osmand", "sygic", "here")),
+    ;
+
+    companion object {
+        /** Los cuatro accesos rápidos de Inicio, en orden. Música ya tiene su tarjeta y su botón en la barra. */
+        val QUICK = listOf(AUTO, RADIO, PHONE, NAV)
+    }
 }

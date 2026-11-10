@@ -96,7 +96,7 @@ class HomeActivity : Activity() {
         media.onChange = { mediaCard.update(it, media.hasAccess()) }
         apps.listen {
             appsPage.set(apps.list)
-            quick.setApps(Slot.entries.map { apps.forSlot(it, prefs) })
+            quick.setApps(Slot.QUICK.map { apps.forSlot(it, prefs) })
         }
         apps.start()
         askLocation()
@@ -108,6 +108,7 @@ class HomeActivity : Activity() {
         rail = Rail(this)
         rail.item(Glyph.HOME, Page.HOME) { show(Page.HOME) }
         rail.item(Glyph.APPS, Page.APPS) { show(Page.APPS) }
+        rail.item(Glyph.AUTO) { openSlot(Slot.AUTO) }
         rail.item(Glyph.PHONE) { openSlot(Slot.PHONE) }
         rail.item(Glyph.MUSIC) { openSlot(Slot.MUSIC) }
         rail.spacer()
@@ -133,8 +134,9 @@ class HomeActivity : Activity() {
         mediaCard = MediaCard(this, { media.previous() }, { media.playPause() }, { media.next() }, ::askMediaAccess)
         right.addView(mediaCard, lp(MATCH, 0, 1f))
         quick = QuickCard(this)
-        quick.setup(Slot.entries.map { slot ->
+        quick.setup(Slot.QUICK.map { slot ->
             val glyph = when (slot) {
+                Slot.AUTO -> Glyph.AUTO
                 Slot.RADIO -> Glyph.RADIO
                 Slot.PHONE -> Glyph.PHONE
                 Slot.MUSIC -> Glyph.MUSIC
@@ -187,7 +189,10 @@ class HomeActivity : Activity() {
         when {
             app != null -> apps.launch(app)
             slot == Slot.NAV -> apps.openNavigation()
-            else -> chooseApp(slot)
+            else -> {
+                if (slot == Slot.AUTO) Toast.makeText(this, "No encontré la app de Android Auto de la radio (Zlink, AutoKit…): elígela.", Toast.LENGTH_LONG).show()
+                chooseApp(slot)
+            }
         }
     }
 
@@ -198,7 +203,7 @@ class HomeActivity : Activity() {
             .setTitle("App para ${slot.title}")
             .setItems(list.map { it.label }.toTypedArray()) { _, i ->
                 prefs.setApp(slot.key, list[i].key)
-                quick.setApps(Slot.entries.map { apps.forSlot(it, prefs) })
+                quick.setApps(Slot.QUICK.map { apps.forSlot(it, prefs) })
             }
             .setNegativeButton("Cancelar", null)
             .show()
@@ -212,7 +217,7 @@ class HomeActivity : Activity() {
                 if (i == 0) apps.info(app) else {
                     val slot = Slot.entries[i - 1]
                     prefs.setApp(slot.key, app.key)
-                    quick.setApps(Slot.entries.map { apps.forSlot(it, prefs) })
+                    quick.setApps(Slot.QUICK.map { apps.forSlot(it, prefs) })
                     Toast.makeText(this, "${app.label}: ${slot.title}", Toast.LENGTH_SHORT).show()
                 }
             }

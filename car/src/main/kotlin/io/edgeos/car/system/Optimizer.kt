@@ -95,7 +95,7 @@ class Optimizer(private val context: Context, private val prefs: Prefs) {
     }
 
     /**
-     * Cierra lo que está en segundo plano, menos lo que suena, la radio y lo del coche. No necesita Shizuku.
+     * Cierra lo que está en segundo plano, menos lo que suena, la radio y lo del coche. No necesita acceso al sistema.
      * Devuelve los MB que quedan libres.
      */
     fun freeMemory(keep: Set<String>): Long {
@@ -132,12 +132,12 @@ class Optimizer(private val context: Context, private val prefs: Prefs) {
     private fun packages(command: String): Set<String> =
         Shell.run(command).lineSequence().map { it.removePrefix("package:").trim() }.filter { PACKAGE.matches(it) }.toSet()
 
-    /** Los launchers (también el de fábrica), Shizuku, este launcher y las piezas del sistema. */
+    /** Los launchers (también el de fábrica), este launcher y las piezas del sistema. */
     private fun protectedPackages(): Set<String> {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         return context.packageManager.queryIntentActivities(home, PackageManager.MATCH_ALL)
             .map { it.activityInfo.packageName }.toSet() + setOf(
-            context.packageName, Shell.SHIZUKU, "android", "com.android.systemui", "com.android.settings",
+            context.packageName, "android", "com.android.systemui", "com.android.settings",
             "com.android.phone", "com.android.shell", "com.android.packageinstaller", "com.android.webview",
         )
     }

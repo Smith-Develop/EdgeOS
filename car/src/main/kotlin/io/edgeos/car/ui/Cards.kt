@@ -46,6 +46,11 @@ class CarCard(context: Context) : LinearLayout(context) {
     private val speed = Ui.text(context, "0", 76f, Ui.TEXT, Ui.light, Gravity.CENTER)
     private val heading = Stat(context, "Rumbo", 18f)
     private val altitude = Stat(context, "Altitud", 18f)
+    private var shown = -1
+    private val speedTween = Tween { v ->
+        val n = Math.round(v)
+        if (n != shown) { shown = n; speed.text = n.toString() }
+    }
 
     init {
         orientation = VERTICAL
@@ -77,7 +82,10 @@ class CarCard(context: Context) : LinearLayout(context) {
             else -> "Buscando GPS"
         }
         gps.setTextColor(if (s.hasFix) Ui.OK else Ui.TEXT2)
-        speed.text = if (s.hasFix) s.kmh.toString() else "—"
+        if (s.hasFix) speedTween.to(s.kmh.toFloat(), 1000) else {
+            speedTween.snap(0f)
+            speed.text = "—"
+        }
         heading.set(s.bearing?.let { "${Drive.compass(it)} ${it.toInt()}°" } ?: "—")
         altitude.set(s.altitude?.let { "$it m" } ?: "—")
     }
@@ -85,7 +93,7 @@ class CarCard(context: Context) : LinearLayout(context) {
 
 /** Velocímetro de aguja para el panel de conducción, de 0 a 200 km/h en 240°. */
 class Gauge(context: Context) : View(context) {
-    var kmh = 0
+    var kmh = 0f
         set(v) {
             if (field != v) { field = v; invalidate() }
         }
@@ -106,7 +114,7 @@ class Gauge(context: Context) : View(context) {
         track.strokeWidth = w
         arc.strokeWidth = w
         c.drawArc(r, 150f, 240f, false, track)
-        val sweep = 240f * (kmh.coerceIn(0, 200) / 200f)
+        val sweep = 240f * (kmh.coerceIn(0f, 200f) / 200f)
         if (sweep > 0) c.drawArc(r, 150f, sweep, false, arc)
         tick.strokeWidth = size * 0.008f
         label.textSize = size * 0.045f
@@ -120,7 +128,7 @@ class Gauge(context: Context) : View(context) {
             if (v % 40 == 0) c.drawText(v.toString(), cx + cos * (r2 - size * 0.06f), cy + sin * (r2 - size * 0.06f) + label.textSize / 3, label)
         }
         big.textSize = size * 0.24f
-        c.drawText(kmh.toString(), cx, cy + big.textSize * 0.3f, big)
+        c.drawText(Math.round(kmh).toString(), cx, cy + big.textSize * 0.3f, big)
         label.textSize = size * 0.05f
         c.drawText("km/h", cx, cy + big.textSize * 0.3f + size * 0.09f, label)
     }
@@ -129,6 +137,7 @@ class Gauge(context: Context) : View(context) {
 /** Panel de conducción: la alternativa al mapa, sin internet. */
 class PanelCard(context: Context, onReset: () -> Unit) : LinearLayout(context) {
     private val gauge = Gauge(context)
+    private val gaugeTween = Tween { gauge.kmh = it }
     private val distance = Stat(context, "Distancia", 18f)
     private val time = Stat(context, "En marcha", 18f)
     private val avg = Stat(context, "Media", 18f)
@@ -159,7 +168,7 @@ class PanelCard(context: Context, onReset: () -> Unit) : LinearLayout(context) {
     }
 
     fun update(s: DriveState) {
-        gauge.kmh = if (s.hasFix) s.kmh else 0
+        gaugeTween.to(if (s.hasFix) s.kmh.toFloat() else 0f, 1000)
         distance.set("${fmtKm(s.tripKm)} km")
         time.set(fmtTime(s.tripSeconds))
         avg.set("${s.avgKmh} km/h")

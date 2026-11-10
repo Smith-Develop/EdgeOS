@@ -2,7 +2,6 @@ package io.edgeos.car.ui
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -24,7 +23,6 @@ import io.edgeos.car.ui.Ui.MATCH
 import io.edgeos.car.ui.Ui.WRAP
 import io.edgeos.car.ui.Ui.lp
 import io.edgeos.car.ui.Ui.px
-import rikka.shizuku.Shizuku
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -48,8 +46,9 @@ class SystemPage(
     private val offset = Ui.text(context, "", 15f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
     private val mapChoice = mutableListOf<TextView>()
 
-    private val status = Ui.text(context, "", 13f, Ui.TEXT2).apply { maxLines = 6 }
+    private val status = Ui.text(context, "Comprobando el acceso al sistema…", 13f, Ui.TEXT2).apply { maxLines = 6 }
     private val statusButton = Ui.text(context, "", 14f, android.graphics.Color.WHITE, Ui.semibold, Gravity.CENTER)
+        .apply { visibility = View.GONE }
     private val list = ListView(context)
     private val restore = Ui.text(context, "Restaurar todo", 14f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
     private val disable = Ui.text(context, "Desactivar (0)", 14f, android.graphics.Color.WHITE, Ui.semibold, Gravity.CENTER)
@@ -64,9 +63,6 @@ class SystemPage(
         override fun getView(position: Int, convert: View?, parent: ViewGroup) = serviceRow(services[position], convert)
     }
 
-    private val binderReceived = Shizuku.OnBinderReceivedListener { refreshServices() }
-    private val binderDead = Shizuku.OnBinderDeadListener { refreshServices() }
-    private val permission = Shizuku.OnRequestPermissionResultListener { _, _ -> refreshServices() }
 
     init {
         orientation = HORIZONTAL
@@ -83,20 +79,6 @@ class SystemPage(
     fun onShow() {
         refreshStats()
         refreshServices()
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        Shizuku.addBinderReceivedListenerSticky(binderReceived, main)
-        Shizuku.addBinderDeadListener(binderDead, main)
-        Shizuku.addRequestPermissionResultListener(permission, main)
-    }
-
-    override fun onDetachedFromWindow() {
-        Shizuku.removeBinderReceivedListener(binderReceived)
-        Shizuku.removeBinderDeadListener(binderDead)
-        Shizuku.removeRequestPermissionResultListener(permission)
-        super.onDetachedFromWindow()
     }
 
     private fun card(title: String) = Ui.column(context).apply {
@@ -136,9 +118,9 @@ class SystemPage(
         val row = line("Animaciones rápidas (0,5×)", anim)
         anim.setOnCheckedChangeListener { _, on ->
             if (busy || on == optimizer.animationsFast()) return@setOnCheckedChangeListener
-            if (Shell.status(context) != Shell.Status.Ready) {
+            if (Shell.access.state != Shell.State.Ready) {
                 anim.isChecked = !on
-                return@setOnCheckedChangeListener toast("Necesita Shizuku: mira \"Servicios innecesarios\".")
+                return@setOnCheckedChangeListener toast("Necesita acceso al sistema: mira \"Servicios innecesarios\".")
             }
             work.execute { runCatching { optimizer.fastAnimations(on) }; main.post { anim.isChecked = optimizer.animationsFast() } }
         }
@@ -293,40 +275,34 @@ class SystemPage(
         }
     }
 
+    /** Pide acceso (root o el ADB de la propia radio) y, con él, carga la lista. */
     private fun refreshServices() {
-        val st = Shell.status(context)
         busy = true
         anim.isChecked = optimizer.animationsFast()
         busy = false
-        val (text, button, action) = when (st) {
-            Shell.Status.NotInstalled -> Triple(
-                "Para desactivar servicios sin root, EdgeOS Car usa Shizuku (gratis, de código abierto). Instálalo primero.",
-                "Descargar Shizuku",
-                { open(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku/releases"))) },
-            )
-            Shell.Status.NotRunning -> Triple(
-                "Shizuku está instalado pero parado. En Android 8 se inicia desde un ordenador, con la radio por USB:\n" +
-                    "adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh\n" +
-                    "Hay que repetirlo tras cada arranque, salvo que la radio tenga root.",
-                "Abrir Shizuku",
-                { context.packageManager.getLaunchIntentForPackage(Shell.SHIZUKU)?.let { open(it) } ?: Unit },
-            )
-            Shell.Status.NoPermission -> Triple(
-                "Shizuku está en marcha. Falta permitir que EdgeOS Car lo use.",
-                "Dar permiso",
-                { Shizuku.requestPermission(Shell.REQUEST) },
-            )
-            Shell.Status.Ready -> Triple("Shizuku listo. Buscando servicios…", "", {})
+        if (Shell.access.state != Shell.State.Ready) show("Comprobando el acceso al sistema…", "") {}
+        work.execute {
+            val access = Shell.connect(context) {
+                main.post { show("En la pantalla aparece \"¿Permitir depuración USB?\": marca \"Permitir siempre\" y pulsa Aceptar.", "") {} }
+            }
+            main.post { onAccess(access) }
         }
-        status.text = text
-        statusButton.text = button
-        statusButton.visibility = if (button.isEmpty()) View.GONE else View.VISIBLE
-        statusButton.setOnClickListener { action() }
-        if (st != Shell.Status.Ready) {
-            services = emptyList()
-            adapter.notifyDataSetChanged()
-            return
+    }
+
+    private fun onAccess(access: Shell.Access) {
+        when (access.state) {
+            Shell.State.Ready -> {}
+            Shell.State.AdbOff -> return show(
+                "Para desactivar servicios, EdgeOS Car usa el ADB de la propia radio (no hace falta instalar nada). " +
+                    "Actívalo en Ajustes → Opciones de desarrollador → Depuración USB. Si sigue cerrado, desde un ordenador " +
+                    "con la radio por USB: adb tcpip 5555 (en muchas radios hay que repetirlo tras cada arranque).",
+                "Abrir opciones de desarrollador",
+            ) { open(Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)) }
+            Shell.State.Denied -> return show("No se aceptó el aviso de depuración en la radio.", "Reintentar") { refreshServices() }
+            else -> return show("No se pudo conectar: ${access.detail}", "Reintentar") { refreshServices() }
         }
+        val via = if (access.via == "root") "con root" else "con el ADB de la radio"
+        show("Acceso listo ($via). Buscando servicios…", "") {}
         work.execute {
             val loaded = runCatching { optimizer.services() }
             main.post {
@@ -335,9 +311,20 @@ class SystemPage(
                 disable.text = "Desactivar (${selected.size})"
                 status.text = loaded.exceptionOrNull()?.let { "No se pudo leer la lista: ${it.message}" }
                     ?: if (services.isEmpty()) "Nada que desactivar en esta radio." else
-                        "Shizuku listo. Marca lo que quieras desactivar; empieza por las \"recomendadas\"."
+                        "Acceso listo ($via). Marca lo que quieras desactivar; empieza por las \"recomendadas\"."
                 adapter.notifyDataSetChanged()
             }
+        }
+    }
+
+    private fun show(text: String, button: String, action: () -> Unit) {
+        status.text = text
+        statusButton.text = button
+        statusButton.visibility = if (button.isEmpty()) View.GONE else View.VISIBLE
+        statusButton.setOnClickListener { action() }
+        if (Shell.access.state != Shell.State.Ready) {
+            services = emptyList()
+            adapter.notifyDataSetChanged()
         }
     }
 

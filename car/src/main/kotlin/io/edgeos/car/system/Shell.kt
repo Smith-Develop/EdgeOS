@@ -1,37 +1,69 @@
 package io.edgeos.car.system
 
 import android.content.Context
-import android.content.pm.PackageManager
-import rikka.shizuku.Shizuku
+import java.io.File
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
- * Comandos de shell (uid 2000, el de adb) a través de Shizuku. En Android 8.1 no hay depuración inalámbrica:
- * Shizuku se inicia desde un ordenador por USB (o en modo root, si la radio lo tiene) tras cada arranque.
+ * Comandos con permisos de sistema, sin apps externas: con root si la radio lo tiene (muchas lo traen), y si no,
+ * con el ADB de la propia radio por la red local ([LocalAdb]). Bloquea: llamar fuera del hilo principal.
  */
 object Shell {
-    const val SHIZUKU = "moe.shizuku.privileged.api"
-    const val REQUEST = 11
+    enum class State { Unknown, Ready, AdbOff, Denied, Error }
 
-    enum class Status { NotInstalled, NotRunning, NoPermission, Ready }
+    data class Access(val state: State, val via: String? = null, val detail: String? = null)
 
-    fun status(context: Context): Status = when {
-        !Shizuku.pingBinder() || Shizuku.isPreV11() ->
-            if (runCatching { context.packageManager.getPackageInfo(SHIZUKU, 0) }.isSuccess) Status.NotRunning else Status.NotInstalled
-        Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED -> Status.NoPermission
-        else -> Status.Ready
+    @Volatile
+    var access = Access(State.Unknown)
+        private set
+
+    private var adb: LocalAdb? = null
+    private var context: Context? = null
+
+    /** Root primero, luego el ADB local. [waiting]: la radio está mostrando "¿Permitir depuración USB?". */
+    @Synchronized
+    fun connect(context: Context, waiting: () -> Unit): Access {
+        this.context = context.applicationContext
+        if (access.state == State.Ready) return access
+        access = when {
+            hasRoot() -> Access(State.Ready, "root")
+            !LocalAdb.listening() -> Access(State.AdbOff)
+            else -> try {
+                adb = LocalAdb.connect(context, 60_000, waiting)
+                Access(State.Ready, "ADB")
+            } catch (e: LocalAdb.NotApproved) {
+                Access(State.Denied)
+            } catch (e: IOException) {
+                Access(State.Error, detail = e.message)
+            }
+        }
+        return access
     }
 
-    private val newProcess by lazy {
-        Shizuku::class.java.getDeclaredMethod(
-            "newProcess", Array<String>::class.java, Array<String>::class.java, String::class.java
-        ).apply { isAccessible = true }
+    @Synchronized
+    fun run(command: String): String = when (access.via) {
+        "root" -> exec(arrayOf("su", "-c", command))
+        "ADB" -> try {
+            adb!!.shell("$command 2>&1").trim()
+        } catch (e: IOException) {
+            // La conexión se cae si la radio se suspende: una reconexión, ya sin aviso (la clave está aceptada).
+            adb?.close()
+            adb = LocalAdb.connect(context!!, 5000) {}
+            adb!!.shell("$command 2>&1").trim()
+        }
+        else -> throw IOException("sin acceso al sistema")
     }
 
-    /** Bloquea hasta que termina: llamar fuera del hilo principal. */
-    fun run(command: String): String {
-        val process = newProcess.invoke(null, arrayOf("sh", "-c", "$command 2>&1"), null, null) as Process
-        val out = process.inputStream.bufferedReader().use { it.readText() }
-        process.waitFor()
+    private fun hasRoot(): Boolean {
+        val found = listOf("/system/xbin/su", "/system/bin/su", "/sbin/su", "/su/bin/su", "/debug_ramdisk/su").any { File(it).exists() }
+        return found && runCatching { exec(arrayOf("su", "-c", "id")).contains("uid=0") }.getOrDefault(false)
+    }
+
+    private fun exec(cmd: Array<String>): String {
+        val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+        val out = p.inputStream.bufferedReader().use { it.readText() }
+        if (!p.waitFor(20, TimeUnit.SECONDS)) p.destroy()
         return out.trim()
     }
 }

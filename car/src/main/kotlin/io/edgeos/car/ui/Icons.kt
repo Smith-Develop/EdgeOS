@@ -9,7 +9,7 @@ import android.graphics.RectF
 import android.graphics.drawable.Drawable
 
 /** Iconos de trazo fino (como Feather/Lucide), dibujados sobre una rejilla de 24×24. */
-enum class Glyph { HOME, APPS, PHONE, MUSIC, SYSTEM, NAV, PLAY, PAUSE, NEXT, PREV, PLUS, MINUS, LOCATE, RADIO, WIFI, GPS, BOLT, RESET, MAP, GAUGE, CHECK, BACK }
+enum class Glyph { AUTO, HOME, APPS, PHONE, MUSIC, SYSTEM, NAV, PLAY, PAUSE, NEXT, PREV, PLUS, MINUS, LOCATE, RADIO, WIFI, GPS, BOLT, RESET, MAP, GAUGE, CHECK, BACK }
 
 class GlyphDrawable(private var glyph: Glyph, color: Int, private val stroke: Float = 2f) : Drawable() {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -41,6 +41,14 @@ class GlyphDrawable(private var glyph: Glyph, color: Int, private val stroke: Fl
         paint.strokeWidth = stroke
         path.reset()
         when (glyph) {
+            Glyph.AUTO -> {
+                // Un móvil que proyecta en la pantalla del coche.
+                r.set(2.5f, 7f, 9.5f, 20.5f); c.drawRoundRect(r, 1.8f, 1.8f, paint)
+                c.drawLine(5f, 17.8f, 7f, 17.8f, paint)
+                r.set(8f, 2f, 24f, 18f); c.drawArc(r, 200f, 70f, false, paint)
+                r.set(11.5f, 5.5f, 20.5f, 14.5f); c.drawArc(r, 200f, 70f, false, paint)
+                c.drawCircle(16f, 10f, 1.3f, fill)
+            }
             Glyph.HOME -> {
                 path.moveTo(3f, 10.5f); path.lineTo(12f, 3f); path.lineTo(21f, 10.5f)
                 path.moveTo(5.5f, 9f); path.lineTo(5.5f, 20f); path.lineTo(18.5f, 20f); path.lineTo(18.5f, 9f)

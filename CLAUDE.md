@@ -150,9 +150,13 @@ Kotlin con vistas clásicas, sin Compose ni AndroidX, `minSdk 26`. Se diseña so
   `adb shell am start -n io.edgeos.car/.HomeActivity`. Pídele que acepte el permiso de ubicación.
 - **Nunca desactives el launcher de fábrica** ni nada del coche. Antes de tocar nada, guarda el estado:
   `adb shell pm list packages -d > antes-desactivados.txt` y `adb shell pm list packages -s > antes-sistema.txt`.
-- Shizuku en Android 8 (sin depuración inalámbrica): instálalo con su permiso y arráncalo con
-  `adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh`. Si la radio tiene root
-  (`adb shell su -c id`), Shizuku puede arrancar solo en modo root.
+- Acceso al sistema **sin Shizuku**: EdgeOS Car usa root si lo hay, o su propio cliente ADB contra
+  `127.0.0.1:5555` (`system/LocalAdb.kt`). Comprueba el puerto con `adb shell "netstat -ltn | grep 5555"` o
+  `adb shell getprop service.adb.tcp.port`; si está cerrado, ábrelo con `adb tcpip 5555` (se pierde al apagar,
+  salvo con root: `adb shell su -c "setprop persist.adb.tcp.port 5555"`, pregúntale antes). La primera vez la
+  radio muestra *¿Permitir depuración USB?*: pídele que marque *Permitir siempre*.
+- Android Auto: la radio lo proyecta con una app receptora (Zlink, AutoKit, Carlinkit…). `Slot.AUTO` en `Apps.kt`
+  la busca por nombre; si no la encuentra, pregúntale cuál es y añade su paquete a las pistas.
 - Servicios: que los elija la persona en EdgeOS Car → Sistema. Si te pide hacerlo desde el ordenador, enséñale
   primero la lista con lo que hace cada uno, usa solo `pm disable-user --user 0` y deja un `deshacer.sh` con los
   `pm enable --user 0` correspondientes. `Optimizer.isCarRelated` y `Optimizer.HEAD_UNIT` son la referencia de lo

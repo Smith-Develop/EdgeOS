@@ -36,7 +36,10 @@ Sistema muestra "layoutlib" en vez del modelo y deja la memoria en blanco, cosas
   - **Panel** de conducción, sin internet: velocímetro de aguja, distancia, tiempo en marcha, media y máxima.
 - **Música**: carátula, título y artista de lo que suena (también la radio FM, si la publica), con anterior,
   reproducir/pausa y siguiente.
-- **Accesos rápidos**: Radio, Teléfono, Música y Navegar. Cada uno busca solo la app adecuada de tu radio;
+- **Android Auto**: un botón en la barra lateral y un acceso rápido que abren la app de proyección de la radio
+  (Zlink, AutoKit, Carlinkit, TLink…), que es la que muestra Android Auto y CarPlay. Si no la encuentra sola, te
+  deja elegirla.
+- **Accesos rápidos**: Android Auto, Radio, Teléfono y Navegar. Cada uno busca solo la app adecuada de tu radio;
   mantenlo pulsado para elegir otra.
 
 **Apps**: todas las apps de la radio. Mantener pulsada una: información o usarla para un acceso rápido.
@@ -72,17 +75,18 @@ Sigue las instrucciones de [`CLAUDE.md`](../CLAUDE.md#edgeos-car-la-radio-del-co
 ⚠️ **No desactives el launcher de fábrica.** En esta placa hay casos de radio FM que deja de funcionar sin él.
 EdgeOS Car nunca lo ofrece en Servicios innecesarios.
 
-### Para Servicios innecesarios y Animaciones rápidas: Shizuku
+### Para Servicios innecesarios y Animaciones rápidas: sin instalar nada más
 
-Android 8 no deja que una app desactive otras. [Shizuku](https://github.com/RikkaApps/Shizuku/releases) le da a
-EdgeOS Car los permisos de `adb`. En Android 8 se inicia desde un ordenador, con la radio por USB:
+Android 8 no deja que una app desactive otras. EdgeOS Car lo hace solo, de dos maneras:
 
-```bash
-adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh
-```
+1. **Con root**, si la radio lo tiene (muchas lo traen): lo usa directamente.
+2. **Con el ADB de la propia radio**: EdgeOS Car lleva dentro un cliente ADB que se conecta a la radio por la
+   red interna (`127.0.0.1:5555`). Activa *Ajustes → Opciones de desarrollador → Depuración USB*; la primera vez
+   la radio pregunta **¿Permitir depuración USB?**: marca *Permitir siempre* y acepta.
 
-Hay que repetirlo **tras cada arranque** de la radio, salvo que tenga root (entonces Shizuku arranca solo).
-Lo que ya desactivaste sigue desactivado aunque Shizuku esté parado.
+Si la radio no tiene el ADB por red abierto (el puerto 5555), se abre una vez desde un ordenador con la radio
+conectada por USB: `adb tcpip 5555`. En muchas radios hay que repetirlo tras cada arranque. Lo que ya desactivaste
+sigue desactivado aunque el ADB esté cerrado.
 
 ## Volver atrás
 
@@ -91,6 +95,8 @@ Lo que ya desactivaste sigue desactivado aunque Shizuku esté parado.
 
 ## Limitaciones conocidas
 
+- Android Auto se ve a pantalla completa en su propia app (Zlink, AutoKit…): Android 8 no permite meter otra app
+  dentro de una tarjeta del launcher.
 - La velocidad, el viaje y el mapa se actualizan mientras EdgeOS Car está a la vista. Con otra app delante,
   Android 8 limita el GPS en segundo plano, así que ese tramo no cuenta en el viaje.
 - Sin acceso a notificaciones, la tarjeta de música no sabe qué suena (los botones sí funcionan).
@@ -108,4 +114,6 @@ diseña sobre 1024×600 y se escala a la pantalla real (`ui/Ui.kt`).
 | `drive/Media.kt` | Lo que suena y sus controles. |
 | `Apps.kt` | Apps instaladas y la app de cada acceso rápido. |
 | `system/Optimizer.kt` | Servicios innecesarios, filtro de lo del coche, memoria, animaciones. |
+| `system/Shell.kt`, `system/LocalAdb.kt` | Acceso al sistema: root o el ADB de la propia radio (cliente adaptado de Free My TV, MIT). |
+| `ui/Tween.kt` | Lleva velocidad, aguja y mapa al nuevo dato fotograma a fotograma: el GPS da uno por segundo. |
 | `ui/` | Tarjetas, mapa, coche, iconos y páginas. |
