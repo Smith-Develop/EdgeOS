@@ -14,6 +14,9 @@ Pensado para la **k80_bsp** (MediaTek MT6580, Android 8.1, 1024×600) y radios p
 <table>
   <tr>
     <td align="center"><img src="docs/home.png" width="420" alt="Inicio: el coche con la velocidad, el panel de conducción, la música y los accesos rápidos"><br><b>Inicio</b> (modo Panel)</td>
+    <td align="center"><img src="docs/home-oscuro.png" width="420" alt="Inicio en modo oscuro"><br><b>Modo oscuro</b></td>
+  </tr>
+  <tr>
     <td align="center"><img src="docs/system.png" width="420" alt="Sistema: estado, optimización rápida, ajustes y servicios innecesarios"><br><b>Sistema</b></td>
   </tr>
   <tr>
@@ -29,8 +32,10 @@ Sistema muestra "layoutlib" en vez del modelo y deja la memoria en blanco, cosas
 ## Qué tiene
 
 **Inicio**
-- **Mi coche**: tu coche visto desde arriba, la **velocidad por GPS** en grande, el rumbo y la altitud. La imagen
-  se cambia en Sistema → *Imagen del coche* (ver abajo).
+- **Mi coche**: tu coche visto desde arriba, la **velocidad por GPS** en grande, el rumbo y la altitud. Lo eliges
+  en Sistema → *Tu coche*: carrocería y color, o una foto propia (ver abajo).
+- **Modo oscuro** para todo, mapa incluido: *Claro*, *Oscuro* o *Automático* (cambia solo al amanecer y al
+  atardecer de donde estés), en Sistema → Ajustes → Tema.
 - **En el centro, a elegir** en Sistema → Ajustes:
   - **Mapa** de OpenStreetMap en gris claro, con tu posición, zoom, recentrar y el botón **Navegar** (abre Google
     Maps, Waze u otra). Necesita internet para las zonas nuevas; las ya vistas se guardan para verlas sin conexión.
@@ -89,12 +94,15 @@ Si la radio no tiene el ADB por red abierto (el puerto 5555), se abre una vez de
 conectada por USB: `adb tcpip 5555`. En muchas radios hay que repetirlo tras cada arranque. Lo que ya desactivaste
 sigue desactivado aunque el ADB esté cerrado.
 
-### Poner la imagen de tu coche
+### Tu coche
 
-Toca el coche en Inicio, o ve a Sistema → **Imagen del coche** → *Elegir imagen…*: aparece la lista de imágenes
-de la radio y de las memorias USB, con miniatura (el gestor de archivos del sistema queda como opción, porque
-muchas radios no lo traen). *Usar la de serie* vuelve a la de fábrica. Debajo, "Ahora:" dice qué imagen se usa y
-a qué tamaño se dibuja, por si algo falla. Para crearla con IA (ChatGPT, Gemini, Copilot…), pide algo así:
+Sistema → **Tu coche**: elige la **carrocería** (compacto, berlina, familiar, SUV, monovolumen, deportivo o pick-up)
+y el **color**, y se ve al momento en Inicio.
+
+<img src="docs/carrocerias.png" width="640" alt="Las siete carrocerías del constructor, en distintos colores">
+
+¿Prefieres una foto? *Usar una foto…* (o tocar el coche en Inicio) muestra las imágenes de la radio y de las
+memorias USB, con miniatura; *Volver al dibujo* deshace. Para crearla con IA (ChatGPT, Gemini, Copilot…), pide algo así:
 
 > Vista cenital exacta, desde arriba, de un [marca, modelo y color de tu coche], con el morro hacia arriba,
 > centrado y recto, sin perspectiva. Fondo blanco liso o transparente, sin sombras ni texto. Imagen vertical de

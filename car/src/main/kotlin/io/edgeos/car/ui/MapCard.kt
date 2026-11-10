@@ -34,7 +34,7 @@ private class PositionOverlay : Overlay() {
     private val path = Path()
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Ui.INK }
     private val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(40, 17, 17, 20) }
-    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Ui.CARD }
 
     override fun draw(c: Canvas, map: MapView, shadow: Boolean) {
         if (shadow) return
@@ -93,9 +93,11 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
             minZoomLevel = 4.0
             maxZoomLevel = 19.0
             controller.setZoom(16.5)
-            // Gris claro: casi sin color y algo más luminoso, como un mapa de salpicadero.
+            // Claro: gris, casi sin color y algo más luminoso. Oscuro: invertido, gris azulado y apagado.
             val m = ColorMatrix().apply { setSaturation(0.12f) }
-            m.postConcat(ColorMatrix(floatArrayOf(1.05f, 0f, 0f, 0f, 8f, 0f, 1.05f, 0f, 0f, 8f, 0f, 0f, 1.05f, 0f, 10f, 0f, 0f, 0f, 1f, 0f)))
+            m.postConcat(ColorMatrix(if (Ui.dark)
+                floatArrayOf(-0.82f, 0f, 0f, 0f, 228f, 0f, -0.82f, 0f, 0f, 230f, 0f, 0f, -0.8f, 0f, 236f, 0f, 0f, 0f, 1f, 0f)
+            else floatArrayOf(1.05f, 0f, 0f, 0f, 8f, 0f, 1.05f, 0f, 0f, 8f, 0f, 0f, 1.05f, 0f, 10f, 0f, 0f, 0f, 1f, 0f)))
             overlayManager.tilesOverlay.setColorFilter(ColorMatrixColorFilter(m))
             // Mientras carga una tesela, del color del mapa en vez de la cuadrícula gris de osmdroid.
             overlayManager.tilesOverlay.loadingBackgroundColor = LOADING
@@ -117,9 +119,9 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
         nav.background = Ui.pressable(Ui.INK, 14f)
         nav.setPadding(px(14), px(10), px(16), px(10))
         val navIcon = View(context)
-        navIcon.background = GlyphDrawable(Glyph.NAV, Color.WHITE)
+        navIcon.background = GlyphDrawable(Glyph.NAV, Ui.ON_INK)
         nav.addView(navIcon, lp(px(20), px(20)))
-        nav.addView(Ui.text(context, "Navegar", 15f, Color.WHITE, Ui.semibold), lp(WRAP, WRAP).apply { marginStart = px(10) })
+        nav.addView(Ui.text(context, "Navegar", 15f, Ui.ON_INK, Ui.semibold), lp(WRAP, WRAP).apply { marginStart = px(10) })
         nav.setOnClickListener { onNavigate() }
         addView(nav, LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.START).apply { setMargins(px(14), px(14), 0, 0) })
 
@@ -204,6 +206,6 @@ class MapCard(context: Context, onNavigate: () -> Unit) : FrameLayout(context) {
     }
 
     private companion object {
-        val LOADING = Color.parseColor("#EEF0F3")
+        val LOADING get() = if (Ui.dark) Color.parseColor("#1D2024") else Color.parseColor("#EEF0F3")
     }
 }

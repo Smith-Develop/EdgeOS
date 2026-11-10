@@ -8,28 +8,16 @@ import java.io.File
 import java.io.InputStream
 
 /**
- * La imagen del coche de Inicio: la que eligió el usuario (copiada a la memoria privada, así funciona aunque se
- * quite la memoria USB) o, si no hay, la de serie. Vista desde arriba, morro hacia arriba, proporción 1:2.
+ * La foto propia del coche (la alternativa al constructor), copiada a la memoria privada: así funciona aunque se
+ * quite la memoria USB. Vista desde arriba, morro hacia arriba, proporción 1:2.
  */
 object CarImage {
-    const val DEFAULT = R.drawable.car_default
     private const val MAX_HEIGHT = 1200
 
     private fun file(context: Context) = File(context.filesDir, "car.png")
 
-    /** Qué se cargó la última vez (de serie, la tuya o un error), para el diagnóstico de Sistema. */
-    @Volatile
-    var status = "sin cargar"
-        private set
-
-    /** La del usuario si hay, y si no la de serie. Llamar fuera del hilo principal. */
-    fun load(context: Context): Bitmap? {
-        val own = file(context).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
-        if (own != null) return own.also { status = "la tuya" }
-        val stock = runCatching { BitmapFactory.decodeResource(context.resources, DEFAULT) }.getOrNull()
-        status = if (stock != null) "la de serie" else "error: no se pudo leer la de serie"
-        return stock
-    }
+    /** La foto del usuario, o null. Llamar fuera del hilo principal. */
+    fun load(context: Context): Bitmap? = file(context).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
 
     fun reset(context: Context) {
         file(context).delete()

@@ -36,6 +36,30 @@ class Prefs(context: Context) {
         get() = sp.getStringSet("disabled", emptySet())!!.toSet()
         set(v) = sp.edit().putStringSet("disabled", v).apply()
 
+    /** Tema: "auto" (claro de día, oscuro de noche, según el sol), "light" o "dark". */
+    var theme: String
+        get() = sp.getString("theme", "auto")!!
+        set(v) = sp.edit().putString("theme", v).apply()
+
+    /** El coche del constructor, y si en su lugar se usa una foto propia. */
+    var carBody: String
+        get() = sp.getString("car_body", "WAGON")!!
+        set(v) = sp.edit().putString("car_body", v).apply()
+    var carColor: Int
+        get() = sp.getInt("car_color", 0xFFB9BEC5.toInt())
+        set(v) = sp.edit().putInt("car_color", v).apply()
+    var carPhoto: Boolean
+        get() = sp.getBoolean("car_photo", false)
+        set(v) = sp.edit().putBoolean("car_photo", v).apply()
+
+    /** Última posición conocida, para saber cuándo anochece aunque aún no haya GPS. Madrid por defecto. */
+    var lastLat: Double
+        get() = java.lang.Double.longBitsToDouble(sp.getLong("last_lat", java.lang.Double.doubleToRawLongBits(40.4168)))
+        set(v) = sp.edit().putLong("last_lat", java.lang.Double.doubleToRawLongBits(v)).apply()
+    var lastLon: Double
+        get() = java.lang.Double.longBitsToDouble(sp.getLong("last_lon", java.lang.Double.doubleToRawLongBits(-3.7038)))
+        set(v) = sp.edit().putLong("last_lon", java.lang.Double.doubleToRawLongBits(v)).apply()
+
     /** Botones del volante aprendidos (ver keys/Keys.kt). */
     var keyIds: Set<String>
         get() = sp.getStringSet("key_ids", emptySet())!!.toSet()

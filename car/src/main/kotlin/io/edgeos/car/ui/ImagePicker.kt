@@ -83,7 +83,7 @@ object ImagePicker {
                 return row
             }
         }
-        AlertDialog.Builder(context)
+        Ui.dialog(context)
             .setTitle(if (files.isEmpty()) "No encontré imágenes" else "Elige la imagen del coche")
             .apply {
                 if (files.isEmpty()) setMessage("Copia la imagen (PNG o JPG) a una memoria USB, conéctala y vuelve a intentarlo.")

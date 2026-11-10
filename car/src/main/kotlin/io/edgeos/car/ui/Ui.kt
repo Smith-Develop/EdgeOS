@@ -32,17 +32,45 @@ object Ui {
     fun px(v: Int): Int = px(v.toFloat())
     fun pxf(v: Float): Float = v * k
 
-    // Claro, como un salpicadero de gama alta: gris de fondo, tarjetas blancas, texto casi negro.
-    val BG = Color.parseColor("#E9EAEE")
-    val CARD = Color.WHITE
-    val TILE = Color.parseColor("#F3F4F6")
-    val TEXT = Color.parseColor("#111114")
-    val TEXT2 = Color.parseColor("#7A7A80")
-    val LINE = Color.parseColor("#E4E5E9")
+    // Claro: gris de fondo, tarjetas blancas, texto casi negro. Oscuro: casi negro, tarjetas grafito, texto claro.
+    // INK es el fondo de los botones principales y ON_INK lo que va encima.
+    var dark = false
+        private set
+    var BG = 0; private set
+    var CARD = 0; private set
+    var TILE = 0; private set
+    var TEXT = 0; private set
+    var TEXT2 = 0; private set
+    var LINE = 0; private set
+    var INK = 0; private set
+    var ON_INK = 0; private set
     val ACCENT = Color.parseColor("#0A84FF")
     val DANGER = Color.parseColor("#FF3B30")
     val OK = Color.parseColor("#34C759")
-    val INK = Color.parseColor("#111114")
+
+    init {
+        theme(false)
+    }
+
+    /** Cambia los colores; las vistas ya creadas no cambian: hay que reconstruir la interfaz. */
+    fun theme(dark: Boolean) {
+        this.dark = dark
+        if (dark) {
+            BG = Color.parseColor("#0E0F12"); CARD = Color.parseColor("#1A1C20"); TILE = Color.parseColor("#25282D")
+            TEXT = Color.parseColor("#F2F3F5"); TEXT2 = Color.parseColor("#8E9097"); LINE = Color.parseColor("#2C2F35")
+            INK = Color.parseColor("#F2F3F5"); ON_INK = Color.parseColor("#111114")
+        } else {
+            BG = Color.parseColor("#E9EAEE"); CARD = Color.WHITE; TILE = Color.parseColor("#F3F4F6")
+            TEXT = Color.parseColor("#111114"); TEXT2 = Color.parseColor("#7A7A80"); LINE = Color.parseColor("#E4E5E9")
+            INK = Color.parseColor("#111114"); ON_INK = Color.WHITE
+        }
+    }
+
+    /** Diálogos del sistema con el tema que toca. */
+    fun dialog(context: Context) = android.app.AlertDialog.Builder(
+        context,
+        if (dark) android.R.style.Theme_Material_Dialog_Alert else android.R.style.Theme_Material_Light_Dialog_Alert,
+    )
 
     lateinit var light: Typeface
     lateinit var regular: Typeface

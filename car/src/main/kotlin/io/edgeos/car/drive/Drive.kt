@@ -144,6 +144,7 @@ class Drive(context: Context, private val prefs: Prefs) : LocationListener {
         prefs.tripMeters = tripM
         prefs.tripSeconds = tripS
         prefs.tripMax = max
+        last?.let { prefs.lastLat = it.latitude; prefs.lastLon = it.longitude }
     }
 
     private fun publish(s: DriveState) {

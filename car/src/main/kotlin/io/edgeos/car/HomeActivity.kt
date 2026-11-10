@@ -21,7 +21,9 @@ import io.edgeos.car.drive.Drive
 import io.edgeos.car.drive.Media
 import io.edgeos.car.system.Optimizer
 import io.edgeos.car.ui.AppsPage
+import io.edgeos.car.ui.CarBody
 import io.edgeos.car.ui.CarCard
+import io.edgeos.car.ui.Sun
 import io.edgeos.car.ui.Glyph
 import io.edgeos.car.ui.ImagePicker
 import io.edgeos.car.ui.MapCard
@@ -75,6 +77,8 @@ class HomeActivity : Activity() {
                 SimpleDateFormat("HH:mm", es).format(now),
                 online(),
             )
+            // Modo automático: cambia de tema al amanecer y al atardecer.
+            if (wantDark() != Ui.dark) applyTheme()
             main.postDelayed(this, 60_000 - System.currentTimeMillis() % 60_000)
         }
     }
@@ -92,6 +96,7 @@ class HomeActivity : Activity() {
         // mantienen una barra del sistema, la ventana es más baja y con el de la pantalla no cabía todo (la
         // imagen del coche, que se queda con el hueco sobrante, desaparecía). Si la ventana cambia, se rehace.
         host = FrameLayout(this)
+        Ui.theme(wantDark())
         host.setBackgroundColor(Ui.BG)
         setContentView(host)
         host.addOnLayoutChangeListener { _, l, t, r, b, _, _, _, _ ->
@@ -118,8 +123,22 @@ class HomeActivity : Activity() {
     private var builtW = 0
     private var builtH = 0
 
-    private fun rebuild(w: Int, h: Int) {
-        if (Math.abs(w - builtW) <= 4 && Math.abs(h - builtH) <= 4) return
+    private fun wantDark(): Boolean = when (prefs.theme) {
+        "dark" -> true
+        "light" -> false
+        else -> drive.state.location?.let { Sun.isNight(it.latitude, it.longitude) } ?: Sun.isNight(prefs.lastLat, prefs.lastLon)
+    }
+
+    /** Aplica el tema elegido y rehace la interfaz con sus colores. */
+    private fun applyTheme() {
+        Ui.theme(wantDark())
+        host.setBackgroundColor(Ui.BG)
+        window.decorView.setBackgroundColor(Ui.BG)
+        if (built) rebuild(builtW, builtH, force = true)
+    }
+
+    private fun rebuild(w: Int, h: Int, force: Boolean = false) {
+        if (!force && Math.abs(w - builtW) <= 4 && Math.abs(h - builtH) <= 4) return
         Log.i(TAG, "ventana ${w}x$h (pantalla ${resources.displayMetrics.widthPixels}x${resources.displayMetrics.heightPixels})")
         builtW = w
         builtH = h
@@ -139,11 +158,22 @@ class HomeActivity : Activity() {
         main.post(tick)
     }
 
-    private fun loadCar() = Thread {
-        val b = CarImage.load(this)
-        Log.i(TAG, "imagen del coche: ${CarImage.status} ${b?.width}x${b?.height}")
-        main.post { carCard.setCar(b) }
-    }.start()
+    /** El coche del constructor o, si se eligió, la foto propia (si no se puede leer, vuelve al dibujo). */
+    private fun loadCar() {
+        drawCar()
+        if (!prefs.carPhoto) return
+        Thread {
+            val b = CarImage.load(this)
+            Log.i(TAG, "foto del coche: ${b?.width}x${b?.height}")
+            main.post { if (b != null) carCard.car.photo(b) }
+        }.start()
+    }
+
+    private fun drawCar() {
+        val body = runCatching { CarBody.valueOf(prefs.carBody) }.getOrDefault(CarBody.WAGON)
+        carCard.car.draw(body, prefs.carColor)
+        Log.i(TAG, "coche: ${carCard.car.describe()}")
+    }
 
     private fun showApps() {
         appsPage.set(apps.list)
@@ -206,12 +236,13 @@ class HomeActivity : Activity() {
             onResetTrip = { drive.resetTrip() },
             onAskMediaAccess = ::askMediaAccess,
             onPickCar = ::pickCar,
-            carInfo = { "${CarImage.status}, ${carCard.car.describe()}" },
             onResetCar = {
+                prefs.carPhoto = false
                 CarImage.reset(this)
-                loadCar()
-                Toast.makeText(this, "Imagen de serie.", Toast.LENGTH_SHORT).show()
+                drawCar()
             },
+            onCarChanged = ::drawCar,
+            onThemeChanged = ::applyTheme,
         )
         for (v in listOf(home, appsPage, systemPage)) pages.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
         show(Page.HOME)
@@ -257,7 +288,7 @@ class HomeActivity : Activity() {
     private fun chooseApp(slot: Slot) {
         val list = apps.list
         if (list.isEmpty()) return
-        AlertDialog.Builder(this)
+        Ui.dialog(this)
             .setTitle("App para ${slot.title}")
             .setItems(list.map { it.label }.toTypedArray()) { _, i ->
                 prefs.setApp(slot.key, list[i].key)
@@ -269,7 +300,7 @@ class HomeActivity : Activity() {
 
     private fun appMenu(app: App) {
         val options = listOf("Información de la app") + Slot.entries.map { "Usar para ${it.title}" }
-        AlertDialog.Builder(this)
+        Ui.dialog(this)
             .setTitle(app.label)
             .setItems(options.toTypedArray()) { _, i ->
                 if (i == 0) apps.info(app) else {
@@ -324,8 +355,10 @@ class HomeActivity : Activity() {
 
     private fun applyCar(bitmap: android.graphics.Bitmap?) = main.post {
         if (bitmap == null) return@post Toast.makeText(this, "No se pudo leer esa imagen.", Toast.LENGTH_LONG).show()
-        carCard.setCar(bitmap)
-        Toast.makeText(this, "Imagen del coche cambiada.", Toast.LENGTH_SHORT).show()
+        prefs.carPhoto = true
+        carCard.car.photo(bitmap)
+        if (built && current == Page.SYSTEM) systemPage.onShow()
+        Toast.makeText(this, "Foto del coche puesta.", Toast.LENGTH_SHORT).show()
     }
 
     // MARK: pantalla completa

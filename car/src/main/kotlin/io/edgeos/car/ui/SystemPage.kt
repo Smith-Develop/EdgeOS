@@ -41,7 +41,8 @@ class SystemPage(
     private val onAskMediaAccess: () -> Unit,
     private val onPickCar: () -> Unit,
     private val onResetCar: () -> Unit,
-    private val carInfo: () -> String = { "" },
+    private val onCarChanged: () -> Unit = {},
+    private val onThemeChanged: () -> Unit = {},
 ) : LinearLayout(context) {
     private val carStatus = Ui.text(context, "", 12f, Ui.TEXT2).apply { maxLines = 2 }
     private val main = Handler(Looper.getMainLooper())
@@ -55,7 +56,7 @@ class SystemPage(
     private val mapChoice = mutableListOf<TextView>()
 
     private val status = Ui.text(context, "Comprobando el acceso al sistema…", 13f, Ui.TEXT2).apply { maxLines = 6 }
-    private val statusButton = Ui.text(context, "", 14f, android.graphics.Color.WHITE, Ui.semibold, Gravity.CENTER)
+    private val statusButton = Ui.text(context, "", 14f, Ui.ON_INK, Ui.semibold, Gravity.CENTER)
         .apply { visibility = View.GONE }
     private val list = ListView(context)
     private val restore = Ui.text(context, "Restaurar todo", 14f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
@@ -72,19 +73,6 @@ class SystemPage(
     }
 
 
-    init {
-        orientation = HORIZONTAL
-        val left = Ui.column(context)
-        left.addView(stateCard())
-        left.addView(quickCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
-        left.addView(settingsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
-        left.addView(keysCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
-        left.addView(carCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
-        val scroll = ScrollView(context).apply { isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(px(2), 0, px(2), px(4)) }
-        scroll.addView(left)
-        addView(scroll, lp(0, MATCH, 0.42f))
-        addView(servicesCard(), lp(0, MATCH, 0.58f).apply { marginStart = px(14) })
-    }
 
     // MARK: botones del volante
 
@@ -97,7 +85,7 @@ class SystemPage(
         keysActivate.setPadding(0, px(10), 0, px(4))
         keysActivate.setOnClickListener { activateKeys() }
         addView(keysActivate)
-        val learn = Ui.text(context, "Aprender un botón", 14f, android.graphics.Color.WHITE, Ui.semibold, Gravity.CENTER)
+        val learn = Ui.text(context, "Aprender un botón", 14f, Ui.ON_INK, Ui.semibold, Gravity.CENTER)
         learn.background = Ui.pressable(Ui.INK, 12f)
         learn.setPadding(0, px(12), 0, px(12))
         learn.setOnClickListener { learnKey() }
@@ -160,7 +148,7 @@ class SystemPage(
 
     private fun learnKey() {
         if (KeyService.instance == null) return activateKeys()
-        val wait = AlertDialog.Builder(context)
+        val wait = Ui.dialog(context)
             .setTitle("Pulsa el botón del volante")
             .setMessage("Pulsa una vez el botón que quieres enseñar a EdgeOS Car.")
             .setNegativeButton("Cancelar", null)
@@ -177,7 +165,7 @@ class SystemPage(
             if (!wait.isShowing) return@postDelayed
             wait.dismiss()
             val factory = factoryKeys()
-            AlertDialog.Builder(context)
+            Ui.dialog(context)
                 .setTitle("No llegó ningún botón")
                 .setMessage("Tu radio no envía ese botón a Android: lo gestiona su microcontrolador. " +
                     (if (factory != null) "Asígnale la acción en el aprendizaje de botones de fábrica." else "Configúralo en el menú de fábrica de la radio."))
@@ -189,11 +177,11 @@ class SystemPage(
 
     private fun chooseActions(id: String) {
         val shorts = KeyAction.entries.filter { it != KeyAction.NONE }
-        AlertDialog.Builder(context)
+        Ui.dialog(context)
             .setTitle("${Keys.name(id)}: al pulsarlo")
             .setItems(shorts.map { it.title }.toTypedArray()) { _, i ->
                 val longs = listOf(KeyAction.NONE) + shorts
-                AlertDialog.Builder(context)
+                Ui.dialog(context)
                     .setTitle("${Keys.name(id)}: al mantenerlo")
                     .setItems(longs.map { if (it == KeyAction.NONE) "Nada (solo pulsar)" else it.title }.toTypedArray()) { _, j ->
                         Keys.save(prefs, id, shorts[i], longs[j])
@@ -208,7 +196,8 @@ class SystemPage(
 
     fun onShow() {
         refreshKeys()
-        carStatus.text = "Ahora: ${carInfo()}"
+        refreshPreview()
+        paintChips()
         refreshStats()
         refreshServices()
     }
@@ -275,6 +264,11 @@ class SystemPage(
             seg.addView(t, lp(0, WRAP, 1f))
         }
         paintChoice()
+        addView(Ui.text(context, "Tema", 13f, Ui.TEXT2))
+        addView(segmented(listOf("Claro" to "light", "Oscuro" to "dark", "Automático" to "auto"), prefs.theme) {
+            prefs.theme = it
+            onThemeChanged()
+        }, lp(MATCH, WRAP).apply { topMargin = px(8); bottomMargin = px(12) })
         addView(Ui.text(context, "En el centro de Inicio", 13f, Ui.TEXT2))
         addView(seg, lp(MATCH, WRAP).apply { topMargin = px(8); bottomMargin = px(6) })
 
@@ -283,7 +277,7 @@ class SystemPage(
         stepper.addView(offset, lp(px(64), WRAP))
         stepper.addView(button(context, GlyphDrawable(Glyph.PLUS, Ui.TEXT), Ui.TILE) { prefs.speedOffset += 1; paintOffset() }, lp(px(40), px(40)))
         paintOffset()
-        addView(line("Corrección de velocidad", stepper))
+        addView(line("Corregir velocidad", stepper))
         addView(link("Reiniciar viaje") { onResetTrip(); toast("Viaje a cero.") })
         addView(link("Mostrar qué suena (acceso a notificaciones)") { onAskMediaAccess() })
         addView(link("Pantalla de inicio predeterminada") {
@@ -291,20 +285,84 @@ class SystemPage(
         })
     }
 
-    private fun carCard() = card("Imagen del coche").apply {
+    // MARK: tu coche (constructor o foto propia)
+
+    private val preview = CarView(context)
+
+    private fun refreshPreview() {
+        val body = runCatching { CarBody.valueOf(prefs.carBody) }.getOrDefault(CarBody.WAGON)
+        preview.draw(body, prefs.carColor)
+        carStatus.text = if (prefs.carPhoto) "En Inicio: tu foto. Toca una carrocería o un color para volver al dibujo." else "En Inicio: ${body.title.lowercase()}, ${CAR_COLORS.firstOrNull { it.second == prefs.carColor }?.first?.lowercase() ?: "color propio"}."
+    }
+
+    private fun pickBody(body: CarBody) {
+        prefs.carBody = body.name
+        prefs.carPhoto = false
+        refreshPreview()
+        onCarChanged()
+    }
+
+    private fun pickColor(color: Int) {
+        prefs.carColor = color
+        prefs.carPhoto = false
+        refreshPreview()
+        onCarChanged()
+    }
+
+    private fun carCard() = card("Tu coche").apply {
+        // Arriba, la vista previa y los colores; debajo, las carrocerías a todo lo ancho (sus nombres no caben al lado).
+        val row = Ui.row(context)
+        row.gravity = Gravity.TOP
+        preview.background = Ui.rounded(Ui.TILE, 14f)
+        row.addView(preview, lp(px(96), px(196)))
+        val colors = Ui.column(context)
+        colors.addView(Ui.text(context, "Color", 13f, Ui.TEXT2))
+        for (group in CAR_COLORS.chunked(4)) {
+            val swatches = Ui.row(context)
+            for ((name, color) in group) {
+                val dot = View(context)
+                dot.contentDescription = name
+                dot.background = Ui.rounded(color, 16f, Ui.LINE)
+                dot.setOnClickListener { pickColor(color) }
+                swatches.addView(dot, lp(px(32), px(32)).apply { marginEnd = px(8) })
+            }
+            colors.addView(swatches, lp(MATCH, WRAP).apply { topMargin = px(10) })
+        }
+        row.addView(colors, lp(0, WRAP, 1f).apply { marginStart = px(16) })
+        addView(row, lp(MATCH, WRAP).apply { topMargin = px(2) })
+
+        addView(Ui.text(context, "Carrocería", 13f, Ui.TEXT2), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        for (group in CarBody.entries.chunked(3)) {
+            val chips = Ui.row(context)
+            for (body in group) {
+                val chip = Ui.text(context, body.title, 13f, Ui.TEXT, Ui.medium, Gravity.CENTER)
+                chip.setPadding(px(4), px(10), px(4), px(10))
+                chip.background = Ui.pressable(Ui.TILE, 10f)
+                chip.setOnClickListener { pickBody(body); paintChips() }
+                chip.tag = body
+                chips.addView(chip, lp(0, WRAP, 1f).apply { marginEnd = px(6) })
+                bodyChips += chip
+            }
+            repeat(3 - group.size) { chips.addView(View(context), lp(0, 1, 1f).apply { marginEnd = px(6) }) }
+            addView(chips, lp(MATCH, WRAP).apply { topMargin = px(6) })
+        }
+        addView(carStatus, lp(MATCH, WRAP).apply { topMargin = px(10) })
+        paintChips()
+        refreshPreview()
+
+        // La foto propia, como alternativa al dibujo.
         val buttons = Ui.row(context)
-        val pick = Ui.text(context, "Elegir imagen…", 14f, android.graphics.Color.WHITE, Ui.semibold, Gravity.CENTER)
+        val pick = Ui.text(context, "Usar una foto…", 14f, Ui.ON_INK, Ui.semibold, Gravity.CENTER)
         pick.background = Ui.pressable(Ui.INK, 12f)
         pick.setPadding(0, px(12), 0, px(12))
         pick.setOnClickListener { onPickCar() }
-        val reset = Ui.text(context, "Usar la de serie", 14f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
+        val reset = Ui.text(context, "Volver al dibujo", 14f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
         reset.background = Ui.pressable(Ui.TILE, 12f)
         reset.setPadding(0, px(12), 0, px(12))
-        reset.setOnClickListener { onResetCar() }
+        reset.setOnClickListener { onResetCar(); refreshPreview() }
         buttons.addView(pick, lp(0, WRAP, 1f))
         buttons.addView(reset, lp(0, WRAP, 1f).apply { marginStart = px(10) })
-        addView(buttons, lp(MATCH, WRAP).apply { topMargin = px(4) })
-        addView(carStatus, lp(MATCH, WRAP).apply { topMargin = px(8) })
+        addView(buttons, lp(MATCH, WRAP).apply { topMargin = px(12) })
 
         val guide = Ui.text(context, CAR_GUIDE, 12f, Ui.TEXT2).apply {
             maxLines = 40
@@ -314,9 +372,43 @@ class SystemPage(
         val box = Ui.column(context)
         box.background = Ui.rounded(Ui.TILE, 12f)
         box.setPadding(px(14), px(12), px(14), px(12))
-        box.addView(Ui.text(context, "Cómo crear la tuya con IA", 13f, Ui.TEXT, Ui.semibold))
+        box.addView(Ui.text(context, "Foto propia: cómo crearla con IA", 13f, Ui.TEXT, Ui.semibold))
         box.addView(guide, lp(MATCH, WRAP).apply { topMargin = px(6) })
         addView(box, lp(MATCH, WRAP).apply { topMargin = px(12) })
+    }
+
+    private val bodyChips = mutableListOf<TextView>()
+
+    private fun paintChips() {
+        for (chip in bodyChips) {
+            val on = (chip.tag as CarBody).name == prefs.carBody && !prefs.carPhoto
+            chip.background = if (on) Ui.rounded(Ui.INK, 10f) else Ui.pressable(Ui.TILE, 10f)
+            chip.setTextColor(if (on) Ui.ON_INK else Ui.TEXT)
+        }
+    }
+
+    /** Selector de varias opciones en una fila, como el de Mapa/Panel. */
+    private fun segmented(options: List<Pair<String, String>>, current: String, onPick: (String) -> Unit): View {
+        val seg = Ui.row(context)
+        seg.background = Ui.rounded(Ui.TILE, 12f)
+        seg.setPadding(px(4), px(4), px(4), px(4))
+        val views = mutableListOf<TextView>()
+        fun paint(value: String) {
+            for ((i, t) in views.withIndex()) {
+                val on = options[i].second == value
+                t.background = if (on) Ui.rounded(Ui.CARD, 10f) else null
+                t.setTextColor(if (on) Ui.TEXT else Ui.TEXT2)
+            }
+        }
+        for ((name, value) in options) {
+            val t = Ui.text(context, name, 14f, Ui.TEXT, Ui.semibold, Gravity.CENTER)
+            t.setPadding(0, px(9), 0, px(9))
+            t.setOnClickListener { paint(value); onPick(value) }
+            views += t
+            seg.addView(t, lp(0, WRAP, 1f))
+        }
+        paint(current)
+        return seg
     }
 
     private fun link(text: String, action: () -> Unit) = Ui.text(context, text, 14f, Ui.ACCENT, Ui.medium).apply {
@@ -494,6 +586,21 @@ class SystemPage(
     }
 
     private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+
+    // Al final: en Kotlin, las propiedades declaradas después de un init aún no existen cuando este se ejecuta.
+    init {
+        orientation = HORIZONTAL
+        val left = Ui.column(context)
+        left.addView(stateCard())
+        left.addView(quickCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(settingsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(keysCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(carCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        val scroll = ScrollView(context).apply { isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(px(2), 0, px(2), px(4)) }
+        scroll.addView(left)
+        addView(scroll, lp(0, MATCH, 0.42f))
+        addView(servicesCard(), lp(0, MATCH, 0.58f).apply { marginStart = px(14) })
+    }
 
     private companion object {
         val FACTORY_KEYS = listOf("com.reglink.keystudy", "com.syu.steer", "com.microntek.controlsettings", "com.fyt.steer")
