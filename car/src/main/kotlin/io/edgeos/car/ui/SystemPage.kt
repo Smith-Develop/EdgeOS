@@ -16,7 +16,13 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import io.edgeos.car.Prefs
+import io.edgeos.car.system.Bluetooth
+import io.edgeos.car.system.Brightness
 import io.edgeos.car.system.Wifi
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.widget.SeekBar
+import android.content.res.ColorStateList
 import io.edgeos.car.system.WifiNetwork
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
@@ -54,6 +60,7 @@ class SystemPage(
     private val onThemeChanged: () -> Unit = {},
     private val onMapsChanged: () -> Unit = {},
     private val onShowIntro: () -> Unit = {},
+    private val isNight: () -> Boolean = { false },
 ) : LinearLayout(context) {
     private val carStatus = Ui.text(context, "", 12f, Ui.TEXT2).apply { maxLines = 2 }
     private val main = Handler(Looper.getMainLooper())
@@ -179,6 +186,122 @@ class SystemPage(
             .show()
     }
 
+    // MARK: Bluetooth
+    private val bt = Bluetooth(context)
+    private val btSwitch = Switch(context)
+    private val btStatus = Ui.text(context, "", 13f, Ui.TEXT2).apply { maxLines = 3 }
+    private val btList = Ui.column(context)
+    private var painting = false
+    private val btReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) = refreshBluetooth()
+    }
+
+    private fun bluetoothCard() = card("Bluetooth").apply {
+        addView(line("Activado", btSwitch))
+        btSwitch.setOnCheckedChangeListener { _, on ->
+            if (painting || on == bt.enabled) return@setOnCheckedChangeListener
+            if (!bt.setEnabled(on)) return@setOnCheckedChangeListener open(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS))
+            btStatus.text = if (on) "Encendiendo…" else "Apagando…"
+        }
+        addView(btStatus, lp(MATCH, WRAP).apply { topMargin = px(2) })
+        addView(btList, lp(MATCH, WRAP).apply { topMargin = px(6) })
+        val links = Ui.row(context)
+        links.addView(link("Emparejar un móvil") { open(bt.pairingIntent()) }, lp(0, WRAP, 1f))
+        links.addView(link("Ajustes del sistema") { open(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)) })
+        addView(links)
+    }
+
+    fun refreshBluetooth() {
+        painting = true
+        btSwitch.isChecked = bt.enabled
+        btSwitch.isEnabled = bt.available
+        painting = false
+        btList.removeAllViews()
+        if (!bt.available) { btStatus.text = "Esta radio no tiene Bluetooth de Android."; return }
+        if (!bt.enabled) { btStatus.text = "Apagado. Actívalo para el manos libres y la música del móvil."; return }
+        val devices = bt.devices()
+        val on = devices.filter { it.connected }
+        btStatus.text = when {
+            on.isNotEmpty() -> "Conectado a " + on.joinToString { it.name }
+            devices.isEmpty() -> "Ningún móvil emparejado. Pulsa \"Emparejar un móvil\"."
+            else -> "Sin móvil conectado." + (bt.name?.let { " La radio se ve como \"$it\"." } ?: "")
+        }
+        for (d in devices.take(6)) {
+            val row = Ui.row(context)
+            row.background = Ui.pressable(android.graphics.Color.TRANSPARENT, 10f)
+            row.setPadding(px(4), px(9), px(4), px(9))
+            row.addView(Ui.text(context, d.name, 14f, Ui.TEXT, Ui.medium), lp(0, WRAP, 1f))
+            row.addView(Ui.text(context, if (d.connected) "Conectado" else "Emparejado", 12f, if (d.connected) Ui.OK else Ui.TEXT2))
+            row.setOnClickListener { open(bt.pairingIntent()) }
+            btList.addView(row)
+        }
+    }
+
+    // MARK: brillo
+    private val brightness = Brightness(context)
+    private val brightBar = SeekBar(context).apply { max = 255 - Brightness.MIN }
+    private val brightAuto = Switch(context)
+    private val brightStatus = Ui.text(context, "", 13f, Ui.TEXT2).apply { maxLines = 3 }
+
+    private fun brightnessCard() = card("Brillo").apply {
+        brightBar.progressTintList = ColorStateList.valueOf(Ui.ACCENT)
+        brightBar.thumbTintList = ColorStateList.valueOf(Ui.ACCENT)
+        brightBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                val level = value + Brightness.MIN
+                // Con el automático propio, lo que se ajusta se recuerda para el día o para la noche.
+                if (prefs.autoBrightness) { if (isNight()) prefs.nightBrightness = level else prefs.dayBrightness = level }
+                // Por el shell, solo al soltar: cada comando tarda.
+                if (brightness.canWrite) brightness.set(level)
+            }
+            override fun onStartTrackingTouch(bar: SeekBar) {
+                if (!brightness.writable) { askBrightness(); return }
+                if (brightness.systemAuto) brightness.setSystemAuto(false).also { paintBrightness() }
+            }
+            override fun onStopTrackingTouch(bar: SeekBar) {
+                if (brightness.writable) brightness.set(bar.progress + Brightness.MIN)
+            }
+        })
+        addView(brightBar, lp(MATCH, WRAP).apply { topMargin = px(4); bottomMargin = px(4) })
+        addView(line("Automático", brightAuto))
+        brightAuto.setOnCheckedChangeListener { _, on ->
+            if (painting) return@setOnCheckedChangeListener
+            if (!brightness.writable) { askBrightness(); paintBrightness(); return@setOnCheckedChangeListener }
+            if (brightness.hasSensor) brightness.setSystemAuto(on)
+            else {
+                prefs.autoBrightness = on
+                if (on) brightness.set(if (isNight()) prefs.nightBrightness else prefs.dayBrightness)
+            }
+            paintBrightness()
+        }
+        addView(brightStatus, lp(MATCH, WRAP).apply { topMargin = px(2) })
+    }
+
+    fun paintBrightness() {
+        painting = true
+        val auto = if (brightness.hasSensor) brightness.systemAuto else prefs.autoBrightness
+        brightAuto.isChecked = auto
+        brightBar.progress = brightness.level - Brightness.MIN
+        painting = false
+        brightStatus.text = when {
+            !brightness.writable -> "Para cambiarlo, EdgeOS Car necesita el permiso \"Modificar ajustes del sistema\". Mueve la barra para darlo."
+            !auto -> "Manual."
+            brightness.hasSensor -> "Lo ajusta el sensor de luz de la radio."
+            isNight() -> "De noche: más bajo para no deslumbrar. Lo que ajustes ahora se recuerda para la noche."
+            else -> "De día: más alto. Al anochecer baja solo. Lo que ajustes ahora se recuerda para el día."
+        }
+    }
+
+    private fun askBrightness() {
+        Ui.dialog(context)
+            .setTitle("Permiso para el brillo")
+            .setMessage("En la pantalla que se abre, activa \"Permitir modificar los ajustes del sistema\" para EdgeOS Car y vuelve atrás.")
+            .setPositiveButton("Abrir") { _, _ -> open(brightness.permissionIntent()) }
+            .setNegativeButton("Ahora no", null)
+            .show()
+    }
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         context.registerReceiver(wifiReceiver, IntentFilter().apply {
@@ -186,10 +309,18 @@ class SystemPage(
             addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
             addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
         })
+        context.registerReceiver(btReceiver, IntentFilter().apply {
+            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+            addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
+            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+            addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
+        })
     }
 
     override fun onDetachedFromWindow() {
         runCatching { context.unregisterReceiver(wifiReceiver) }
+        runCatching { context.unregisterReceiver(btReceiver) }
         super.onDetachedFromWindow()
     }
 
@@ -371,6 +502,8 @@ class SystemPage(
     fun onShow() {
         if (wifi.enabled) wifi.scan()
         refreshWifi()
+        refreshBluetooth()
+        paintBrightness()
         refreshMaps()
         refreshKeys()
         refreshPreview()
@@ -758,6 +891,32 @@ class SystemPage(
         }
     }
 
+    // MARK: acerca de
+    private fun aboutCard() = card("Acerca de").apply {
+        val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
+        addView(Ui.text(context, "EdgeOS Car" + (version?.let { " $it" } ?: ""), 15f, Ui.TEXT, Ui.semibold))
+        addView(Ui.text(context, "Un launcher gratuito para radios Android de coche: velocidad, mapa sin internet, música y ajustes en una sola " +
+            "pantalla clara, y una radio más rápida sin apps de fábrica estorbando.", 13f, Ui.TEXT2).apply { maxLines = 5; ellipsize = null },
+            lp(MATCH, WRAP).apply { topMargin = px(4) })
+        addView(line("Creado por", Ui.text(context, AUTHOR, 14f, Ui.TEXT, Ui.medium)))
+        addView(Ui.text(context, "Si te es útil, puedes invitarme a un café: ayuda a seguir mejorándolo.", 13f, Ui.TEXT2).apply { maxLines = 3; ellipsize = null })
+        val coffee = Ui.text(context, "Invítame a un café", 14f, Ui.ON_INK, Ui.semibold, Gravity.CENTER)
+        coffee.setPadding(px(18), px(11), px(18), px(11))
+        coffee.background = Ui.pressable(Ui.INK, 12f)
+        coffee.setOnClickListener { web(DONATE) }
+        addView(coffee, lp(MATCH, WRAP).apply { topMargin = px(10); bottomMargin = px(4) })
+        val links = Ui.row(context)
+        links.addView(link("Contactar o sugerir algo") { web("$REPO/issues") }, lp(0, WRAP, 1f))
+        links.addView(link("Proyecto en GitHub") { web(REPO) })
+        addView(links)
+    }
+
+    private fun web(url: String) {
+        // Sin navegador en la radio no hay dónde abrirlo: al menos que se vea la dirección.
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { toast("Ábrelo desde el móvil: $url") }
+    }
+
     private fun open(intent: Intent) {
         runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             .onFailure { toast("No se pudo abrir.") }
@@ -771,11 +930,14 @@ class SystemPage(
         val left = Ui.column(context)
         left.addView(stateCard())
         left.addView(wifiCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(bluetoothCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(brightnessCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(quickCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(settingsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(mapsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(keysCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(carCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
+        left.addView(aboutCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         val scroll = ScrollView(context).apply { isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(px(2), 0, px(2), px(4)) }
         scroll.addView(left)
         addView(scroll, lp(0, MATCH, 0.42f))
@@ -783,6 +945,9 @@ class SystemPage(
     }
 
     private companion object {
+        const val AUTHOR = "Smith-Develop"
+        const val REPO = "https://github.com/Smith-Develop/EdgeOS"
+        const val DONATE = "https://www.paypal.com/ncp/payment/TD5SNJ7PAXJKA"
         val FACTORY_KEYS = listOf("com.reglink.keystudy", "com.syu.steer", "com.microntek.controlsettings", "com.fyt.steer")
         val CAR_GUIDE = """
             1. Pide a una IA de imágenes (ChatGPT, Gemini, Copilot…) algo así:

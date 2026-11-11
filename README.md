@@ -24,7 +24,7 @@ para mirarla de reojo mientras conduces. Las apps del fabricante siguen debajo, 
 abrirlas.
 
 > [!NOTE]
-> **Versión 0.9.** Está en uso en una radio k80_bsp de Reglink (Android 8.1). La **radio FM** y el **teléfono**
+> **Versión 0.10.** Está en uso en una radio k80_bsp de Reglink (Android 8.1). La **radio FM** y el **teléfono**
 > propios están en desarrollo: por ahora, esos accesos abren las apps de fábrica.
 
 ### Capturas
@@ -72,6 +72,7 @@ interna y los USB que se pausa solo durante las llamadas.
 
 **Sistema**
 - **Wi-Fi**: redes cercanas, conectar con contraseña y encender o apagar, sin salir del launcher.
+- **Bluetooth** (móviles emparejados y conectados) y **brillo**, con un automático que baja solo al anochecer.
 - **Estado** de la radio: memoria, almacenamiento y temperatura del procesador.
 - **Optimización**: liberar memoria, animaciones más rápidas y **servicios innecesarios** desactivables, como el
   actualizador Adups, que envía datos a China. **Nada del coche aparece nunca** (radio, cámara, Bluetooth, CAN bus,
@@ -229,3 +230,9 @@ El fondo lo dibuja el propio launcher: Android 13+ no deja que una app normal le
 - La lista de UAD-ng es **GPL-3**: se **descarga** al usarla y no va dentro de los APK.
 - Fuente Inter: SIL Open Font License ([`LICENSE-Inter-OFL.txt`](LICENSE-Inter-OFL.txt)).
 - No se usa ningún recurso de Apple ni de fabricantes de coches.
+
+## Apoya el proyecto
+
+EdgeOS lo hace **Smith-Develop** y es gratis. Si te es útil, puedes
+[invitarme a un café ☕](https://www.paypal.com/ncp/payment/TD5SNJ7PAXJKA). Para dudas, fallos o ideas, abre un
+[issue](https://github.com/Smith-Develop/EdgeOS/issues).

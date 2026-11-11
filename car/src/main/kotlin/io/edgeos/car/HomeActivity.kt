@@ -25,6 +25,7 @@ import android.widget.Toast
 import android.util.Log
 import io.edgeos.car.drive.Drive
 import io.edgeos.car.drive.Media
+import io.edgeos.car.system.Brightness
 import io.edgeos.car.system.Optimizer
 import io.edgeos.car.ui.AppsPage
 import io.edgeos.car.ui.CarBody
@@ -90,6 +91,7 @@ class HomeActivity : Activity() {
             )
             // Modo automático: cambia de tema al amanecer y al atardecer.
             if (wantDark() != Ui.dark) applyTheme()
+            autoBrightness()
             main.postDelayed(this, 60_000 - System.currentTimeMillis() % 60_000)
         }
     }
@@ -145,7 +147,20 @@ class HomeActivity : Activity() {
     private fun wantDark(): Boolean = when (prefs.theme) {
         "dark" -> true
         "light" -> false
-        else -> drive.state.location?.let { Sun.isNight(it.latitude, it.longitude) } ?: Sun.isNight(prefs.lastLat, prefs.lastLon)
+        else -> isNight()
+    }
+
+    private fun isNight() = drive.state.location?.let { Sun.isNight(it.latitude, it.longitude) } ?: Sun.isNight(prefs.lastLat, prefs.lastLon)
+
+    private val brightness by lazy { Brightness(this) }
+    private var brightNight: Boolean? = null
+
+    /** Brillo automático propio (la radio no tiene sensor de luz): cambia solo al amanecer y al atardecer. */
+    private fun autoBrightness() {
+        if (!prefs.autoBrightness || brightness.hasSensor) { brightNight = null; return }
+        val night = isNight()
+        if (night == brightNight) return
+        if (brightness.set(if (night) prefs.nightBrightness else prefs.dayBrightness)) brightNight = night
     }
 
     /** Aplica el tema elegido y rehace la interfaz con sus colores. */
@@ -309,6 +324,7 @@ class HomeActivity : Activity() {
             onThemeChanged = ::applyTheme,
             onMapsChanged = { if (prefs.showMap) showCenter() },
             onShowIntro = { showOnboarding(0) },
+            isNight = { isNight() },
         )
         musicPage = MusicPage(this, media, player,
             hasStorage = { checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED },

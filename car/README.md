@@ -9,7 +9,7 @@ Pensado para la **k80_bsp** de Reglink (MediaTek MT6580, Android 8.1, 1280×720)
 Android 8.0. Qué radios son compatibles: [README principal](../README.md#radios-compatibles).
 
 > [!NOTE]
-> **Versión 0.9, en uso en una k80_bsp.** La radio FM y el teléfono propios están en desarrollo: por ahora, esos
+> **Versión 0.10, en uso en una k80_bsp.** La radio FM y el teléfono propios están en desarrollo: por ahora, esos
 > accesos abren las apps de fábrica.
 
 <table>
@@ -79,6 +79,11 @@ sin abrir la app de cada una.
 - **Wi-Fi**: activarlo o apagarlo, ver las redes cercanas con su señal y conectarse (pide la contraseña si hace
   falta). Tocar el icono de Wi-Fi de la barra superior lleva aquí. En Android 10 o más nuevo abre los ajustes del
   sistema, porque ya no deja hacerlo a las apps.
+- **Bluetooth**: encenderlo o apagarlo y ver qué móviles están emparejados y cuál está conectado. *Emparejar un móvil*
+  abre la app de Bluetooth de la radio, que es la que lleva las llamadas y la agenda.
+- **Brillo**: una barra y **Automático**. Si la radio tiene sensor de luz, lo usa; si no (lo normal), EdgeOS Car
+  pone el brillo de día y baja solo al anochecer, y recuerda lo que ajustes para el día y para la noche. La primera
+  vez pide el permiso *Modificar ajustes del sistema* (con root o el ADB de la radio no hace falta).
 - **Estado**: modelo, Android, memoria y almacenamiento libres, temperatura del procesador.
 - **Optimización rápida**: *Liberar memoria* (cierra lo que está en segundo plano, menos lo que suena, la radio y
   lo del coche) y *Animaciones rápidas* a 0,5×.
@@ -154,6 +159,12 @@ Son mapas vectoriales de [Mapsforge](https://github.com/mapsforge/mapsforge) con
 [OpenStreetMap](https://www.openstreetmap.org/copyright) (© colaboradores de OpenStreetMap, ODbL), del servidor
 `download.mapsforge.org`. La radio consulta su catálogo, así que se adapta a las regiones que haya.
 
+## Acerca de y apoyo
+
+EdgeOS Car lo hace **Smith-Develop** y es gratis. Sistema → **Acerca de** cuenta qué es, enlaza a este proyecto
+para contactar o proponer mejoras ([issues](https://github.com/Smith-Develop/EdgeOS/issues)) y tiene el botón
+**Invítame a un café** ([PayPal](https://www.paypal.com/ncp/payment/TD5SNJ7PAXJKA)).
+
 ## Volver atrás
 
 - Sistema → **Restaurar todo**. Sin EdgeOS Car: `adb shell pm enable <paquete>`.
@@ -188,5 +199,6 @@ diseña sobre 1024×600 y se escala a la pantalla real (`ui/Ui.kt`).
 | `maps/Maps.kt`, `ui/MapsUi.kt` | Mapas sin conexión: catálogo, descargas y diálogos. |
 | `music/` | Biblioteca de canciones y reproductor propio. |
 | `system/Wifi.kt` | Redes Wi-Fi: buscar, conectar y activar. |
+| `system/Bluetooth.kt`, `system/Brightness.kt` | Bluetooth y brillo (con su automático por amanecer y atardecer). |
 | `ui/Onboarding.kt` | La presentación del primer arranque. |
 | `ui/` | Tarjetas, mapa, iconos y páginas. |

@@ -16,6 +16,16 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("map_heading_up", true)
         set(v) = sp.edit().putBoolean("map_heading_up", v).apply()
 
+    /** Brillo automático hecho por EdgeOS (sin sensor de luz): un nivel para el día y otro para la noche. */
+    var autoBrightness: Boolean
+        get() = sp.getBoolean("auto_brightness", false)
+        set(v) = sp.edit().putBoolean("auto_brightness", v).apply()
+    var dayBrightness: Int
+        get() = sp.getInt("day_brightness", 230)
+        set(v) = sp.edit().putInt("day_brightness", v).apply()
+    var nightBrightness: Int
+        get() = sp.getInt("night_brightness", 70)
+        set(v) = sp.edit().putInt("night_brightness", v).apply()
     /** Ya vio la presentación del primer arranque. */
     var onboarded: Boolean
         get() = sp.getBoolean("onboarded", false)
