@@ -9,7 +9,7 @@ import android.graphics.RectF
 import android.graphics.drawable.Drawable
 
 /** Iconos de trazo fino (como Feather/Lucide), dibujados sobre una rejilla de 24×24. */
-enum class Glyph { AUTO, HOME, APPS, PHONE, MUSIC, SYSTEM, NAV, PLAY, PAUSE, NEXT, PREV, PLUS, MINUS, LOCATE, RADIO, WIFI, GPS, BOLT, RESET, MAP, GAUGE, CHECK, BACK }
+enum class Glyph { COMPASS, AUTO, HOME, APPS, PHONE, MUSIC, SYSTEM, NAV, PLAY, PAUSE, NEXT, PREV, PLUS, MINUS, LOCATE, RADIO, WIFI, GPS, BOLT, RESET, MAP, GAUGE, CHECK, BACK }
 
 class GlyphDrawable(private var glyph: Glyph, color: Int, private val stroke: Float = 2f) : Drawable() {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -41,6 +41,15 @@ class GlyphDrawable(private var glyph: Glyph, color: Int, private val stroke: Fl
         paint.strokeWidth = stroke
         path.reset()
         when (glyph) {
+            Glyph.COMPASS -> {
+                // Aguja: la mitad norte rellena (roja al pintarla) y la sur hueca.
+                c.drawCircle(12f, 12f, 9.5f, paint)
+                path.moveTo(12f, 4.5f); path.lineTo(15f, 12f); path.lineTo(9f, 12f); path.close()
+                c.drawPath(path, fill)
+                path.reset()
+                path.moveTo(9f, 12f); path.lineTo(15f, 12f); path.lineTo(12f, 19.5f); path.close()
+                c.drawPath(path, paint)
+            }
             Glyph.AUTO -> {
                 // Un móvil que proyecta en la pantalla del coche.
                 r.set(2.5f, 7f, 9.5f, 20.5f); c.drawRoundRect(r, 1.8f, 1.8f, paint)

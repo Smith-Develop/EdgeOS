@@ -54,15 +54,20 @@ class TopBar(context: Context) : LinearLayout(context) {
         setPadding(px(4), 0, px(4), 0)
         addView(date, lp(0, WRAP, 1f))
         addView(View(context).apply { background = gps }, lp(px(20), px(20)))
-        addView(wifi, lp(px(20), px(20)).apply { marginStart = px(14) })
+        addView(wifi, lp(px(24), px(24)).apply { marginStart = px(14) })
         addView(clock, lp(WRAP, WRAP).apply { marginStart = px(16) })
     }
 
     fun set(date: String, time: String, online: Boolean) {
         this.date.text = date
         clock.text = time
-        wifi.visibility = if (online) View.VISIBLE else View.GONE
+        wifi.alpha = if (online) 1f else 0.3f
     }
 
     fun gps(fix: Boolean) = gps.setColor(if (fix) Ui.OK else Ui.TEXT2)
+
+    /** Tocar el icono de Wi-Fi (atenuado si no hay conexión). */
+    fun onWifi(action: () -> Unit) {
+        wifi.setOnClickListener { action() }
+    }
 }

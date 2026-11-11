@@ -72,7 +72,11 @@ class MapCard(
     offline: List<File> = emptyList(),
     /** Pulsar "Descargar mapa sin conexión" (solo aparece si no hay ninguno). */
     onGetMaps: (() -> Unit)? = null,
+    /** Rumbo arriba (lo que tienes delante, arriba) o norte arriba; la brújula del mapa lo cambia. */
+    private var headingUp: Boolean = true,
+    private val onHeadingUpChanged: (Boolean) -> Unit = {},
 ) : FrameLayout(context) {
+    private val compass: View
     private var offlineSource: MapsForgeTileSource? = null
     private val map: MapView
     private val position = PositionOverlay()
@@ -167,6 +171,11 @@ class MapCard(
         side.elevation = Ui.pxf(2f)
         side.addView(button(context, GlyphDrawable(Glyph.PLUS, Ui.TEXT), 0) { map.controller.zoomIn() }, lp(px(48), px(48)))
         side.addView(button(context, GlyphDrawable(Glyph.MINUS, Ui.TEXT), 0) { map.controller.zoomOut() }, lp(px(48), px(48)))
+        // Brújula: señala el norte; tocarla alterna entre rumbo arriba y norte arriba.
+        val compassButton = button(context, GlyphDrawable(Glyph.COMPASS, Ui.DANGER, 1.6f), 0) { toggleHeadingUp() }
+        compass = compassButton.getChildAt(0)
+        compassButton.contentDescription = "Orientación del mapa"
+        side.addView(compassButton, lp(px(48), px(48)))
         addView(side, LayoutParams(WRAP, WRAP, Gravity.END or Gravity.CENTER_VERTICAL).apply { marginEnd = px(14) })
         recenter = button(context, GlyphDrawable(Glyph.LOCATE, Ui.TEXT), Ui.CARD) {
             following = true
@@ -207,7 +216,36 @@ class MapCard(
         val p = GeoPoint(fromLat + (toLat - fromLat) * t, fromLon + (toLon - fromLon) * t)
         position.point = p
         position.bearing = fromBearing + ((toBearing - fromBearing + 540f) % 360f - 180f) * t
+        if (headingUp) orient(position.bearing)
         if (following) map.controller.setCenter(p) else map.invalidate()
+    }
+
+    /** Gira el mapa para que el rumbo quede arriba, y la brújula con él. */
+    private fun orient(bearing: Float) {
+        map.setMapOrientation(-bearing, false)
+        compass.rotation = -bearing
+    }
+
+    private fun toggleHeadingUp() {
+        headingUp = !headingUp
+        if (headingUp) orient(position.bearing) else {
+            map.setMapOrientation(0f, false)
+            compass.rotation = 0f
+        }
+        applyOffset()
+        map.invalidate()
+        onHeadingUpChanged(headingUp)
+    }
+
+    // Con el rumbo arriba, la posición va más abajo: se ve más calle por delante que por detrás.
+    private fun applyOffset() {
+        map.setMapCenterOffset(0, if (headingUp) (map.height * 0.2f).toInt() else 0)
+        position.point?.let { if (following) map.controller.setCenter(it) }
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        post { applyOffset() }
     }
 
     fun update(s: DriveState) {

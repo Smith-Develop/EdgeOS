@@ -9,7 +9,7 @@ Pensado para la **k80_bsp** de Reglink (MediaTek MT6580, Android 8.1, 1280×720)
 Android 8.0. Qué radios son compatibles: [README principal](../README.md#radios-compatibles).
 
 > [!NOTE]
-> **Versión 0.8, en uso en una k80_bsp.** La radio FM y el teléfono propios están en desarrollo: por ahora, esos
+> **Versión 0.9, en uso en una k80_bsp.** La radio FM y el teléfono propios están en desarrollo: por ahora, esos
 > accesos abren las apps de fábrica.
 
 <table>
@@ -32,13 +32,26 @@ Sistema muestra "layoutlib" en vez del modelo y deja la memoria en blanco, cosas
 
 ## Qué tiene
 
+**Presentación**: al abrirla por primera vez, cinco pantallas cuentan qué hace, piden los dos permisos (ubicación y
+ver qué suena) con un botón cada uno y ayudan a dejarla como **pantalla de inicio predeterminada**. Se puede
+saltar, y se vuelve a ver en Sistema → Ajustes → *Ver la presentación*.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/intro.png" width="420" alt="Primera pantalla de la presentación: el coche y tres ventajas"><br><b>Bienvenida</b></td>
+    <td align="center"><img src="docs/intro-inicio.png" width="420" alt="Última pantalla: elegir EdgeOS Car como inicio"><br><b>Hacerla el inicio</b></td>
+  </tr>
+</table>
+
 **Inicio**
 - **Mi coche**: tu coche visto desde arriba, la **velocidad por GPS** en grande, el rumbo y la altitud. Lo eliges
   en Sistema → *Tu coche*: carrocería y color, o una foto propia (ver abajo).
 - **Modo oscuro** para todo, mapa incluido: *Claro*, *Oscuro* o *Automático* (cambia solo al amanecer y al
   atardecer de donde estés), en Sistema → Ajustes → Tema.
 - **En el centro, a elegir** en Sistema → Ajustes:
-  - **Mapa** de OpenStreetMap en gris claro (u oscuro), con tu posición, zoom, recentrar y el botón **Navegar** (abre
+  - **Mapa** de OpenStreetMap en gris claro (u oscuro), con tu posición, zoom, recentrar y el botón **Navegar**. Por defecto el mapa **gira con el coche**: la calle por
+    la que vas queda siempre hacia arriba y tu posición algo más abajo, para ver más de lo que viene. La brújula
+    roja cambia a *norte arriba* y vuelve; se recuerda (abre
     Google Maps, Waze u otra). **Sin internet** con los mapas descargados (ver abajo); sin ellos, va por internet.
   - **Panel** de conducción, sin internet: velocímetro de aguja, distancia, tiempo en marcha, media y máxima.
 - **Música**: carátula, título y artista de lo que suena, con anterior, reproducir/pausa y siguiente. Al tocarla se
@@ -63,6 +76,9 @@ sin abrir la app de cada una.
 **Apps**: todas las apps de la radio. Mantener pulsada una: información o usarla para un acceso rápido.
 
 **Sistema**
+- **Wi-Fi**: activarlo o apagarlo, ver las redes cercanas con su señal y conectarse (pide la contraseña si hace
+  falta). Tocar el icono de Wi-Fi de la barra superior lleva aquí. En Android 10 o más nuevo abre los ajustes del
+  sistema, porque ya no deja hacerlo a las apps.
 - **Estado**: modelo, Android, memoria y almacenamiento libres, temperatura del procesador.
 - **Optimización rápida**: *Liberar memoria* (cierra lo que está en segundo plano, menos lo que suena, la radio y
   lo del coche) y *Animaciones rápidas* a 0,5×.
@@ -171,4 +187,6 @@ diseña sobre 1024×600 y se escala a la pantalla real (`ui/Ui.kt`).
 | `CarImage.kt` | La imagen del coche: la de serie o la del usuario, copiada a la memoria de la app. |
 | `maps/Maps.kt`, `ui/MapsUi.kt` | Mapas sin conexión: catálogo, descargas y diálogos. |
 | `music/` | Biblioteca de canciones y reproductor propio. |
+| `system/Wifi.kt` | Redes Wi-Fi: buscar, conectar y activar. |
+| `ui/Onboarding.kt` | La presentación del primer arranque. |
 | `ui/` | Tarjetas, mapa, iconos y páginas. |

@@ -24,7 +24,7 @@ para mirarla de reojo mientras conduces. Las apps del fabricante siguen debajo, 
 abrirlas.
 
 > [!NOTE]
-> **Versión 0.8.** Está en uso en una radio k80_bsp de Reglink (Android 8.1). La **radio FM** y el **teléfono**
+> **Versión 0.9.** Está en uso en una radio k80_bsp de Reglink (Android 8.1). La **radio FM** y el **teléfono**
 > propios están en desarrollo: por ahora, esos accesos abren las apps de fábrica.
 
 ### Capturas
@@ -60,14 +60,18 @@ en Sistema se lee "layoutlib" donde la radio pone su modelo.</sub>
 - **Tu coche visto desde arriba** con la **velocidad por GPS** en grande, el rumbo y la altitud. La aguja, el número
   y el mapa se mueven de forma fluida: el GPS da un dato por segundo y EdgeOS calcula los fotogramas intermedios.
 - **En el centro, a elegir:** el **mapa** (OpenStreetMap en gris, **sin internet** con los mapas descargados) con el
-  botón *Navegar*, o un **panel de conducción** con velocímetro, distancia, tiempo en marcha, media y máxima.
+  botón *Navegar*; gira con el coche para que la calle por la que vas quede siempre arriba (con la brújula pasa a
+  norte arriba). O un **panel de conducción** con velocímetro, distancia, tiempo en marcha, media y máxima.
 - **Música** y **accesos rápidos**: Android Auto, Radio, Teléfono y Navegar. Cada uno encuentra solo la app de tu radio.
 
 **Música**: una pantalla para **cualquier fuente** (Bluetooth del móvil, Spotify, TuneIn, Android Auto…), con
 carátula, barra de progreso que se arrastra y selector de fuentes, más un **reproductor propio** para la memoria
 interna y los USB que se pausa solo durante las llamadas.
 
+**Presentación** al primer arranque: qué ofrece, los permisos con un botón y cómo dejarla como pantalla de inicio.
+
 **Sistema**
+- **Wi-Fi**: redes cercanas, conectar con contraseña y encender o apagar, sin salir del launcher.
 - **Estado** de la radio: memoria, almacenamiento y temperatura del procesador.
 - **Optimización**: liberar memoria, animaciones más rápidas y **servicios innecesarios** desactivables, como el
   actualizador Adups, que envía datos a China. **Nada del coche aparece nunca** (radio, cámara, Bluetooth, CAN bus,

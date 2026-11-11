@@ -16,6 +16,14 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import io.edgeos.car.Prefs
+import io.edgeos.car.system.Wifi
+import io.edgeos.car.system.WifiNetwork
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.net.wifi.WifiManager
+import android.text.InputType
+import android.widget.CheckBox
+import android.widget.EditText
 import io.edgeos.car.maps.Maps
 import io.edgeos.car.keys.KeyAction
 import io.edgeos.car.keys.KeyService
@@ -45,6 +53,7 @@ class SystemPage(
     private val onCarChanged: () -> Unit = {},
     private val onThemeChanged: () -> Unit = {},
     private val onMapsChanged: () -> Unit = {},
+    private val onShowIntro: () -> Unit = {},
 ) : LinearLayout(context) {
     private val carStatus = Ui.text(context, "", 12f, Ui.TEXT2).apply { maxLines = 2 }
     private val main = Handler(Looper.getMainLooper())
@@ -75,6 +84,114 @@ class SystemPage(
     }
 
 
+
+    // MARK: Wi-Fi
+
+    private val wifi = Wifi(context)
+    private val wifiSwitch = Switch(context)
+    private val wifiStatus = Ui.text(context, "", 13f, Ui.TEXT2).apply { maxLines = 2 }
+    private val wifiList = Ui.column(context)
+    private val wifiReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) = refreshWifi()
+    }
+
+    private fun wifiCard() = card("Wi-Fi").apply {
+        addView(line("Activado", wifiSwitch))
+        wifiSwitch.setOnCheckedChangeListener { _, on ->
+            if (busy || on == wifi.enabled) return@setOnCheckedChangeListener
+            if (!wifi.canControl) return@setOnCheckedChangeListener open(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
+            wifi.setEnabled(on)
+            wifiStatus.text = if (on) "Encendiendo…" else "Apagado."
+        }
+        addView(wifiStatus, lp(MATCH, WRAP).apply { topMargin = px(2) })
+        addView(wifiList, lp(MATCH, WRAP).apply { topMargin = px(6) })
+        val links = Ui.row(context)
+        links.addView(link("Buscar redes") { wifi.scan(); wifiStatus.text = "Buscando redes…" }, lp(0, WRAP, 1f))
+        links.addView(link("Ajustes del sistema") { open(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)) })
+        addView(links)
+    }
+
+    fun refreshWifi() {
+        busy = true
+        wifiSwitch.isChecked = wifi.enabled
+        busy = false
+        wifiList.removeAllViews()
+        if (!wifi.enabled) {
+            wifiStatus.text = "Apagado. Actívalo para conectarte a tu red o al móvil compartiendo datos."
+            return
+        }
+        val current = wifi.current()
+        wifiStatus.text = if (current != null) "Conectado a $current" else "Sin conexión. Elige una red."
+        for (n in wifi.networks().take(8)) {
+            val row = Ui.row(context)
+            row.background = Ui.pressable(android.graphics.Color.TRANSPARENT, 10f)
+            row.setPadding(px(4), px(9), px(4), px(9))
+            val texts = Ui.column(context)
+            texts.addView(Ui.text(context, n.ssid, 14f, Ui.TEXT, Ui.medium))
+            val connected = n.ssid == current
+            texts.addView(Ui.text(context, when {
+                connected -> "Conectada"
+                n.saved -> "Guardada"
+                n.secure -> "Con contraseña"
+                else -> "Abierta"
+            }, 12f, if (connected) Ui.OK else Ui.TEXT2))
+            row.addView(texts, lp(0, WRAP, 1f))
+            row.addView(Ui.text(context, bars(n.level), 13f, if (connected) Ui.OK else Ui.TEXT2))
+            row.setOnClickListener { if (!connected) join(n) }
+            wifiList.addView(row)
+        }
+        if (wifiList.childCount == 0) wifiList.addView(Ui.text(context, "No se ven redes. Pulsa \"Buscar redes\".", 13f, Ui.TEXT2))
+    }
+
+    private fun bars(level: Int) = "●".repeat(level.coerceIn(0, 4)) + "○".repeat(4 - level.coerceIn(0, 4))
+
+    /** Conectarse: directamente si es abierta o ya guardada; si no, pide la contraseña. */
+    private fun join(n: WifiNetwork) {
+        if (!wifi.canControl) return open(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
+        if (!n.secure || n.saved) {
+            wifi.connect(n, null)
+            wifiStatus.text = "Conectando a ${n.ssid}…"
+            return
+        }
+        val box = Ui.column(context)
+        box.setPadding(px(22), px(8), px(22), 0)
+        val field = EditText(context).apply {
+            hint = "Contraseña"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine()
+        }
+        val show = CheckBox(context).apply { text = "Mostrar la contraseña" }
+        show.setOnCheckedChangeListener { _, on ->
+            field.inputType = InputType.TYPE_CLASS_TEXT or (if (on) InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else InputType.TYPE_TEXT_VARIATION_PASSWORD)
+            field.setSelection(field.text.length)
+        }
+        box.addView(field, lp(MATCH, WRAP))
+        box.addView(show, lp(MATCH, WRAP))
+        Ui.dialog(context)
+            .setTitle(n.ssid)
+            .setView(box)
+            .setPositiveButton("Conectar") { _, _ ->
+                val pass = field.text.toString()
+                if (pass.length < (if (n.wep) 5 else 8)) return@setPositiveButton toast("La contraseña es demasiado corta.")
+                wifiStatus.text = if (wifi.connect(n, pass)) "Conectando a ${n.ssid}…" else "No se pudo guardar la red."
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        context.registerReceiver(wifiReceiver, IntentFilter().apply {
+            addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
+            addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
+            addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
+        })
+    }
+
+    override fun onDetachedFromWindow() {
+        runCatching { context.unregisterReceiver(wifiReceiver) }
+        super.onDetachedFromWindow()
+    }
 
     // MARK: mapas sin conexión
 
@@ -252,6 +369,8 @@ class SystemPage(
     }
 
     fun onShow() {
+        if (wifi.enabled) wifi.scan()
+        refreshWifi()
         refreshMaps()
         refreshKeys()
         refreshPreview()
@@ -338,6 +457,7 @@ class SystemPage(
         addView(line("Corregir velocidad", stepper))
         addView(link("Reiniciar viaje") { onResetTrip(); toast("Viaje a cero.") })
         addView(link("Mostrar qué suena (acceso a notificaciones)") { onAskMediaAccess() })
+        addView(link("Ver la presentación") { onShowIntro() })
         addView(link("Pantalla de inicio predeterminada") {
             open(Intent(android.provider.Settings.ACTION_HOME_SETTINGS))
         })
@@ -650,6 +770,7 @@ class SystemPage(
         orientation = HORIZONTAL
         val left = Ui.column(context)
         left.addView(stateCard())
+        left.addView(wifiCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(quickCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(settingsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })
         left.addView(mapsCard(), lp(MATCH, WRAP).apply { topMargin = px(14) })

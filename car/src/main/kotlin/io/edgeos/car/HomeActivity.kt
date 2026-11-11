@@ -35,6 +35,7 @@ import io.edgeos.car.ui.ImagePicker
 import io.edgeos.car.ui.MapCard
 import io.edgeos.car.ui.MediaCard
 import io.edgeos.car.ui.MusicPage
+import io.edgeos.car.ui.Onboarding
 import io.edgeos.car.music.LocalPlayer
 import io.edgeos.car.ui.PanelCard
 import io.edgeos.car.ui.QuickCard
@@ -176,6 +177,48 @@ class HomeActivity : Activity() {
         showApps()
         main.removeCallbacks(tick)
         main.post(tick)
+        if (!prefs.onboarded || onboarding != null) showOnboarding(onboarding?.page ?: 0)
+    }
+
+    // MARK: presentación del primer arranque
+
+    private var onboarding: Onboarding? = null
+
+    private fun showOnboarding(page: Int = 0) {
+        onboarding?.let { host.removeView(it) }
+        val o = Onboarding(this,
+            car = { v -> v.draw(runCatching { CarBody.valueOf(prefs.carBody) }.getOrDefault(CarBody.WAGON), prefs.carColor) },
+            hasLocation = { checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED },
+            hasMedia = { media.hasAccess() },
+            isDefaultHome = ::isDefaultHome,
+            askLocation = { askLocation(fromIntro = true) },
+            askMedia = ::askMediaAccess,
+            makeDefault = ::makeDefaultHome,
+            onDone = ::finishOnboarding,
+            startPage = page,
+        )
+        onboarding = o
+        host.addView(o, FrameLayout.LayoutParams(MATCH, MATCH))
+    }
+
+    private fun finishOnboarding() {
+        prefs.onboarded = true
+        onboarding?.let { v -> v.animate().alpha(0f).setDuration(200).withEndAction { host.removeView(v) }.start() }
+        onboarding = null
+        show(Page.HOME)
+        askLocation() // por si se saltó la página de permisos: sin ubicación no hay velocidad
+    }
+
+    private fun isDefaultHome(): Boolean =
+        packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo?.packageName == packageName
+
+    /** Ajustes → Aplicación de inicio; si la radio no lo tiene, el selector de inicio del sistema. */
+    private fun makeDefaultHome() {
+        val tries = listOf(Intent(Settings.ACTION_HOME_SETTINGS), Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))
+        for (i in tries) if (runCatching { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+        Toast.makeText(this, "Ajustes → Apps → Aplicación de inicio → EdgeOS Car", Toast.LENGTH_LONG).show()
     }
 
     /** El coche del constructor o, si se eligió, la foto propia (si no se puede leer, vuelve al dibujo). */
@@ -217,6 +260,7 @@ class HomeActivity : Activity() {
         // Mismo margen a los dos lados: las tarjetas no se pegan a la barra lateral.
         content.setPadding(px(16), 0, px(16), px(16))
         topBar = TopBar(this)
+        topBar.onWifi { show(Page.SYSTEM) }
         content.addView(topBar, lp(MATCH, px(52)))
         pages = FrameLayout(this)
         content.addView(pages, lp(MATCH, 0, 1f))
@@ -264,6 +308,7 @@ class HomeActivity : Activity() {
             onCarChanged = ::drawCar,
             onThemeChanged = ::applyTheme,
             onMapsChanged = { if (prefs.showMap) showCenter() },
+            onShowIntro = { showOnboarding(0) },
         )
         musicPage = MusicPage(this, media, player,
             hasStorage = { checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED },
@@ -296,7 +341,8 @@ class HomeActivity : Activity() {
         mapCard = null
         panelCard = null
         if (prefs.showMap) {
-            mapCard = MapCard(this, { openSlot(Slot.NAV) }, Maps.installed(this), onGetMaps = { MapsUi.offerMadrid(this) })
+            mapCard = MapCard(this, { openSlot(Slot.NAV) }, Maps.installed(this), onGetMaps = { MapsUi.offerMadrid(this) },
+                headingUp = prefs.mapHeadingUp, onHeadingUpChanged = { prefs.mapHeadingUp = it })
                 .also { center.addView(it) }
             if (resumed) mapCard?.onResume()
         } else {
@@ -408,7 +454,9 @@ class HomeActivity : Activity() {
         if (hasFocus) immersive()
     }
 
-    private fun askLocation() {
+    /** Al arrancar solo si ya vio la presentación (si no, se pide en ella, explicando para qué). */
+    private fun askLocation(fromIntro: Boolean = false) {
+        if (!fromIntro && !prefs.onboarded) return
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 1)
         }
@@ -423,6 +471,7 @@ class HomeActivity : Activity() {
             if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED) pickCar() else systemPicker()
             return
         }
+        onboarding?.refresh()
         if (results.firstOrNull() == PackageManager.PERMISSION_GRANTED && resumed) drive.start()
         else if (results.isNotEmpty()) Toast.makeText(this, "Sin permiso de ubicación no hay velocidad.", Toast.LENGTH_LONG).show()
     }
@@ -438,6 +487,7 @@ class HomeActivity : Activity() {
     override fun onResume() {
         super.onResume()
         immersive()
+        onboarding?.refresh()
         resumed = true
         drive.start()
         media.start()
@@ -489,6 +539,7 @@ class HomeActivity : Activity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        onboarding?.let { if (it.page > 0) it.go(it.page - 1); return }
         if (built && current != Page.HOME) show(Page.HOME)
     }
 }

@@ -11,6 +11,16 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("show_map", true)
         set(v) = sp.edit().putBoolean("show_map", v).apply()
 
+    /** Mapa con el rumbo hacia arriba (lo que tienes delante, arriba) o con el norte arriba. */
+    var mapHeadingUp: Boolean
+        get() = sp.getBoolean("map_heading_up", true)
+        set(v) = sp.edit().putBoolean("map_heading_up", v).apply()
+
+    /** Ya vio la presentación del primer arranque. */
+    var onboarded: Boolean
+        get() = sp.getBoolean("onboarded", false)
+        set(v) = sp.edit().putBoolean("onboarded", v).apply()
+
     /** Corrección de la velocidad en %, para GPS que marcan de más o de menos. */
     var speedOffset: Int
         get() = sp.getInt("speed_offset", 0)
