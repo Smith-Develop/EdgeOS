@@ -5,11 +5,12 @@ visto desde arriba con la velocidad, el mapa o un panel de conducción, la músi
 **Sistema**, una pantalla para optimizar la radio y desactivar servicios que no hacen falta, sin root y con
 vuelta atrás.
 
-Pensado para la **k80_bsp** (MediaTek MT6580, Android 8.1, 1024×600) y radios parecidas. Funciona desde Android 8.0.
+Pensado para la **k80_bsp** de Reglink (MediaTek MT6580, Android 8.1, 1280×720) y radios parecidas. Funciona desde
+Android 8.0. Qué radios son compatibles: [README principal](../README.md#radios-compatibles).
 
 > [!NOTE]
-> **Versión 0.1, compilada pero sin probar en una radio.** El APK se genera sin errores y la interfaz se ha
-> revisado en el ordenador (las capturas de abajo), pero todavía no ha funcionado en ningún aparato real.
+> **Versión 0.8, en uso en una k80_bsp.** La radio FM y el teléfono propios están en desarrollo: por ahora, esos
+> accesos abren las apps de fábrica.
 
 <table>
   <tr>
@@ -25,7 +26,7 @@ Pensado para la **k80_bsp** (MediaTek MT6580, Android 8.1, 1024×600) y radios p
   </tr>
 </table>
 
-<sub>Capturas de la interfaz real, dibujada con el motor de Android Studio a 1024×600 y con datos de ejemplo
+<sub>Capturas de la interfaz real, dibujada con el motor de Android Studio a 1280×720 y con datos de ejemplo
 (velocidad, canción, apps). No vienen de una radio: el mapa no aparece porque necesita internet, y la pantalla
 Sistema muestra "layoutlib" en vez del modelo y deja la memoria en blanco, cosas que en la radio salen bien.</sub>
 
