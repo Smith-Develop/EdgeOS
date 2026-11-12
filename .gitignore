@@ -5,6 +5,7 @@ local.properties
 *.iml
 *.keystore
 *.jks
+keystore.properties
 app/build/
 informe-radio-*
 apks-radio-*

@@ -105,6 +105,12 @@ En la carpeta del repo, ejecuta `claude` y dile:
 
 Sigue las instrucciones de [`CLAUDE.md`](../CLAUDE.md#edgeos-car-la-radio-del-coche).
 
+### Descargando el APK
+
+Baja el APK de la última versión en [Releases](https://github.com/Smith-Develop/EdgeOS/releases/latest), pásalo a la radio con una memoria USB y ábrelo con
+el gestor de archivos (permite *Orígenes desconocidos* si lo pide). Todas las versiones van firmadas con la misma
+clave, así que se actualiza instalando la nueva encima.
+
 ### A mano
 
 1. Compila: `./gradlew :car:assembleDebug` → `car/build/outputs/apk/debug/car-debug.apk`.

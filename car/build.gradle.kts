@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
@@ -17,11 +19,25 @@ android {
         androidResources.localeFilters += arrayOf("es")
     }
 
+    // Firma de las versiones publicadas: la clave y sus contraseñas están en keystore.properties, que nunca se sube.
+    // Sin ese archivo, la versión release sale sin firmar.
+    val keys = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { f ->
+        Properties().apply { f.inputStream().use { load(it) } }
+    }
+    signingConfigs {
+        if (keys != null) create("release") {
+            storeFile = file(keys.getProperty("storeFile"))
+            storePassword = keys.getProperty("storePassword")
+            keyAlias = keys.getProperty("keyAlias")
+            keyPassword = keys.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Sin R8: osmdroid y Mapsforge usan reflexión, y la versión publicada debe ser la misma que se prueba.
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     dependenciesInfo {

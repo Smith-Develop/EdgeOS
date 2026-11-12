@@ -117,7 +117,12 @@ cambiar nada; con su informe se puede adaptar EdgeOS Car a ella.
 
 ### Instalar EdgeOS Car
 
-**Con Claude Code (lo fácil).** En una terminal:
+**Descarga el APK (lo más fácil).** Baja `EdgeOS-Car-x.y.apk` de la última versión en
+**[Releases](https://github.com/Smith-Develop/EdgeOS/releases/latest)**, cópialo a una memoria USB, conéctala a la radio y ábrelo con el gestor de
+archivos (la radio pedirá permitir *Orígenes desconocidos*). Al abrir EdgeOS Car, la presentación te guía con los
+permisos y para dejarlo como inicio. Las versiones nuevas se instalan encima, sin perder los ajustes.
+
+**Con Claude Code.** En una terminal:
 ```bash
 git clone https://github.com/Smith-Develop/EdgeOS.git
 cd EdgeOS
@@ -127,7 +132,7 @@ y dile: *"Instala EdgeOS Car en mi radio Android, está en 192.168.1.50. Ve dici
 Instala lo que falte en el ordenador, compila, instala en la radio y solo te pide lo que se hace con la radio
 delante. Sigue [`CLAUDE.md`](CLAUDE.md).
 
-**A mano.** `./gradlew :car:assembleDebug`, copia `car/build/outputs/apk/debug/car-debug.apk` a la radio (memoria
+**Compilándolo tú.** `./gradlew :car:assembleDebug`, copia `car/build/outputs/apk/debug/car-debug.apk` a la radio (memoria
 USB o `adb install -r`), ábrelo, acepta el permiso de ubicación y elige **EdgeOS Car** como pantalla de inicio. No
 desactives el launcher de fábrica: así siempre puedes volver a él. Los detalles están en [`car/README.md`](car/README.md).
 

@@ -141,6 +141,10 @@ muestran sus apps y su fondo, por si hay algo que no quiere publicar.
 Kotlin con vistas clásicas, sin Compose ni AndroidX, `minSdk 23` (Android 6: cualquier radio). Se diseña sobre 1024×600 y `Ui.px()` escala.
 
 - Compilar: `./gradlew :car:assembleDebug` → `car/build/outputs/apk/debug/car-debug.apk`.
+- **Publicar una versión:** sube `versionCode` y `versionName` en `car/build.gradle.kts`, y `./gradlew :car:assembleRelease`
+  con `keystore.properties` en la raíz (lo tiene la persona, junto a `edgeos-car.jks`; nunca se suben). Sin esa clave
+  no se puede actualizar encima: no generes otra. Después, una Release en GitHub (`gh release create vX.Y`) con el
+  APK como `EdgeOS-Car-X.Y.apk`. Pregunta antes de publicarla.
 - **La radio (lo hace la persona):** Ajustes → Acerca de → 7 toques en *Número de compilación* → Opciones de
   desarrollador → *Depuración USB*. Algunas radios esconden Ajustes: si no aparece, una app como *Activity
   Launcher* abre `com.android.settings/.Settings$DevelopmentSettingsActivity`. Cable USB-A a USB-A o el puerto
