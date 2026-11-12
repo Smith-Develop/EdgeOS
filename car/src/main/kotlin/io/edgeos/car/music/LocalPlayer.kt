@@ -12,6 +12,7 @@ import android.media.MediaPlayer
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -53,9 +54,8 @@ class LocalPlayer(private val context: Context) {
         .setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
 
     // Llamadas y avisos del navegador: pausar o bajar el volumen, y volver después.
-    private val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-        .setAudioAttributes(attributes)
-        .setOnAudioFocusChangeListener({ change ->
+    private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        main.post {
             when (change) {
                 AudioManager.AUDIOFOCUS_LOSS -> { resumeOnFocus = false; pause() }
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> { if (player?.isPlaying == true) { resumeOnFocus = true; pause() } }
@@ -65,8 +65,27 @@ class LocalPlayer(private val context: Context) {
                     if (resumeOnFocus) { resumeOnFocus = false; play() }
                 }
             }
-        }, main)
-        .build()
+        }
+    }
+
+    // AudioFocusRequest es de Android 8; antes, la forma antigua con el flujo de música.
+    private val focus: Any? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(attributes)
+                .setOnAudioFocusChangeListener(focusListener).build()
+        else null
+    }
+
+    @Suppress("DEPRECATION")
+    private fun requestFocus(): Boolean = AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) audio.requestAudioFocus(focus as AudioFocusRequest)
+        else audio.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
+
+    @Suppress("DEPRECATION")
+    private fun abandonFocus() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) audio.abandonAudioFocusRequest(focus as AudioFocusRequest)
+        else audio.abandonAudioFocus(focusListener)
+    }
 
     /** Toca la lista desde la canción [start]. */
     fun play(tracks: List<Track>, start: Int) {
@@ -77,7 +96,7 @@ class LocalPlayer(private val context: Context) {
     fun play() {
         val p = player ?: return if (queue.isNotEmpty()) load(index.coerceAtLeast(0), true) else Unit
         if (!prepared) return
-        if (audio.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return
+        if (!requestFocus()) return
         session.isActive = true
         p.start()
         publishState()
@@ -103,7 +122,7 @@ class LocalPlayer(private val context: Context) {
     }
 
     fun release() {
-        audio.abandonAudioFocusRequest(focus)
+        abandonFocus()
         player?.release()
         player = null
         session.release()

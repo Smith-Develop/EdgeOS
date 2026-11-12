@@ -1,6 +1,6 @@
 # EdgeOS · Vidrio: notas para Claude
 
-Un launcher para Android con aspecto de iOS 26 ("Liquid Glass") y una pantalla, **Limpieza**, que desactiva apps
+Un launcher para Android de vidrio translúcido, inspirado en iOS 26 y una pantalla, **Limpieza**, que desactiva apps
 de fábrica con Shizuku. Kotlin + Jetpack Compose. El teléfono objetivo es un **Motorola Edge 70 con Android 16**.
 
 La persona a la que ayudas quiere que **tú lo hagas todo** desde su ordenador y que solo le pidas lo que no puedes
@@ -89,11 +89,10 @@ Pregúntale primero. Que lo haga en el teléfono (mantener pulsado el fondo → 
 
 ### 6. Capturas reales
 
-`docs/screenshots/*.png` son **maquetas** del diseño, no capturas. Cuando la app funcione, cámbialas por capturas
-de verdad con los mismos nombres: pídele que deje el teléfono en cada pantalla (inicio, búsqueda con "ca" escrito,
-menú de una app, ajustes, Limpieza) y haz `adb exec-out screencap -p > docs/screenshots/<nombre>.png`. Después
-quita del `README.md` los avisos de "maqueta" y de "sin compilar". Avísale de que las capturas muestran sus apps y su
-fondo, por si hay algo que no quiere publicar.
+Aún no hay capturas de Vidrio (se quitaron las maquetas: imitaban iconos de Apple y el logo de Motorola). Cuando
+funcione, pídele que deje el teléfono en cada pantalla (inicio, búsqueda con "ca" escrito, menú de una app, ajustes,
+Limpieza), haz `adb exec-out screencap -p > docs/screenshots/<nombre>.png` y añádelas al `README.md`. Avísale de que
+muestran sus apps y su fondo, por si hay algo que no quiere publicar.
 
 ### 7. Limpieza con Shizuku (opcional)
 
@@ -139,7 +138,7 @@ fondo, por si hay algo que no quiere publicar.
 
 `car/` es otro launcher, para radios Android de coche (ver [`car/README.md`](car/README.md)). Pensado para la
 **k80_bsp**: MediaTek MT6580, Mali-400, 1024×600 y **Android 8.1 de verdad**, aunque la radio diga Android 12.
-Kotlin con vistas clásicas, sin Compose ni AndroidX, `minSdk 26`. Se diseña sobre 1024×600 y `Ui.px()` escala.
+Kotlin con vistas clásicas, sin Compose ni AndroidX, `minSdk 23` (Android 6: cualquier radio). Se diseña sobre 1024×600 y `Ui.px()` escala.
 
 - Compilar: `./gradlew :car:assembleDebug` → `car/build/outputs/apk/debug/car-debug.apk`.
 - **La radio (lo hace la persona):** Ajustes → Acerca de → 7 toques en *Número de compilación* → Opciones de

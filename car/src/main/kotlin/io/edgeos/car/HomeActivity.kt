@@ -13,6 +13,9 @@ import io.edgeos.car.ui.MapsUi
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
+import android.window.OnBackInvokedDispatcher
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -96,8 +99,11 @@ class HomeActivity : Activity() {
         }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag") // La rama sin flag solo corre antes de Android 13.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Android 16 ya no llama a onBackPressed en las apps que lo tienen como destino.
+        if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { goBack() }
         Ui.fonts(this)
         prefs = Prefs(this)
         drive = Drive(applicationContext, prefs)
@@ -136,7 +142,9 @@ class HomeActivity : Activity() {
         apps.listen { if (built) showApps() }
         apps.start()
         askLocation()
-        registerReceiver(mapDone, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        // Desde Android 13 hay que decir si la recibe de otras apps: el aviso llega desde el gestor de descargas.
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(mapDone, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), RECEIVER_EXPORTED)
+        else registerReceiver(mapDone, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
     }
 
     private lateinit var host: FrameLayout
@@ -325,10 +333,11 @@ class HomeActivity : Activity() {
             onMapsChanged = { if (prefs.showMap) showCenter() },
             onShowIntro = { showOnboarding(0) },
             isNight = { isNight() },
+            askBluetooth = { requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), BLUETOOTH) },
         )
         musicPage = MusicPage(this, media, player,
-            hasStorage = { checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED },
-            askStorage = { requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), MUSIC_STORAGE) },
+            hasStorage = { checkSelfPermission(AUDIO_PERMISSION) == PackageManager.PERMISSION_GRANTED },
+            askStorage = { requestPermissions(arrayOf(AUDIO_PERMISSION), MUSIC_STORAGE) },
             openApp = { pkg -> packageManager.getLaunchIntentForPackage(pkg)?.let { runCatching { startActivity(it) } } },
         )
         // Tocar la tarjeta de música de Inicio abre la pantalla Música.
@@ -416,8 +425,8 @@ class HomeActivity : Activity() {
 
     /** Primero el selector propio (muchas radios no traen gestor de archivos); el del sistema, como opción. */
     private fun pickCar() {
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), STORAGE)
+        if (checkSelfPermission(IMAGE_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(IMAGE_PERMISSION), STORAGE)
             return
         }
         Thread {
@@ -481,6 +490,10 @@ class HomeActivity : Activity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) {
         if (requestCode == MUSIC_STORAGE) {
             musicPage.scan(force = true)
+            return
+        }
+        if (requestCode == BLUETOOTH) {
+            systemPage.refreshBluetooth()
             return
         }
         if (requestCode == STORAGE) {
@@ -551,10 +564,21 @@ class HomeActivity : Activity() {
         private const val PICK_CAR = 7
         private const val STORAGE = 8
         private const val MUSIC_STORAGE = 9
+        private const val BLUETOOTH = 10
+
+        // Android 13 separó el permiso de almacenamiento por tipo de archivo.
+        private val AUDIO_PERMISSION =
+            if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+        private val IMAGE_PERMISSION =
+            if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
     }
 
     @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
+    @SuppressLint("GestureBackNavigation") // Desde Android 13 se usa el callback de onCreate.
+    override fun onBackPressed() = goBack()
+
+    // Atrás: página anterior de la presentación, o volver a Inicio. Un launcher nunca se cierra.
+    private fun goBack() {
         onboarding?.let { if (it.page > 0) it.go(it.page - 1); return }
         if (built && current != Page.HOME) show(Page.HOME)
     }

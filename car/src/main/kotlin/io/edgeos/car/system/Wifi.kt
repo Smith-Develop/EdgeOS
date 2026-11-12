@@ -13,6 +13,7 @@ data class WifiNetwork(val ssid: String, val level: Int, val secure: Boolean, va
  * El Wi-Fi gestionado desde el launcher. En Android 8 y 9 una app puede encenderlo, buscar redes y conectarse;
  * desde Android 10 Google lo prohibió y [canControl] es false: entonces se abre el panel del sistema.
  */
+@android.annotation.SuppressLint("MissingPermission") // Todo va en runCatching: sin permiso, lista vacía.
 @Suppress("DEPRECATION") // Las API de Wi-Fi de Android 8, sustituidas en Android 10, que es justo lo que no tiene la radio.
 class Wifi(context: Context) {
     private val wm by lazy { context.applicationContext.getSystemService(WifiManager::class.java) }

@@ -3,7 +3,6 @@ package io.edgeos.car.system
 import android.content.Context
 import java.io.File
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /**
  * Comandos con permisos de sistema, sin apps externas: con root si la radio lo tiene (muchas lo traen), y si no,
@@ -62,8 +61,11 @@ object Shell {
 
     private fun exec(cmd: Array<String>): String {
         val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+        // waitFor(tiempo) es de Android 8: el límite de 20 s se pone con un hilo aparte.
+        val killer = Thread { runCatching { Thread.sleep(20_000); p.destroy() } }.apply { isDaemon = true; start() }
         val out = p.inputStream.bufferedReader().use { it.readText() }
-        if (!p.waitFor(20, TimeUnit.SECONDS)) p.destroy()
+        p.waitFor()
+        killer.interrupt()
         return out.trim()
     }
 }

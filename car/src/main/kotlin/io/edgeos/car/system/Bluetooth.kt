@@ -24,6 +24,11 @@ class Bluetooth(private val context: Context) {
 
     fun setEnabled(on: Boolean): Boolean = runCatching { if (on) adapter!!.enable() else adapter!!.disable() }.getOrDefault(false)
 
+    /** Desde Android 12, ver los móviles emparejados pide un permiso que se concede en la app. */
+    val allowed: Boolean
+        get() = android.os.Build.VERSION.SDK_INT < 31 ||
+            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+
     /** El nombre con el que la ven los móviles. */
     val name: String? get() = runCatching { adapter?.name }.getOrNull()
 

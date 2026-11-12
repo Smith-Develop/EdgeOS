@@ -5,8 +5,8 @@ visto desde arriba con la velocidad, el mapa o un panel de conducción, la músi
 **Sistema**, una pantalla para optimizar la radio y desactivar servicios que no hacen falta, sin root y con
 vuelta atrás.
 
-Pensado para la **k80_bsp** de Reglink (MediaTek MT6580, Android 8.1, 1280×720) y radios parecidas. Funciona desde
-Android 8.0. Qué radios son compatibles: [README principal](../README.md#radios-compatibles).
+Pensado para la **k80_bsp** de Reglink (MediaTek MT6580, Android 8.1, 1280×720), y hecho para cualquier radio con
+Android 6.0 o superior y pantalla horizontal. Qué radios son compatibles: [README principal](../README.md#radios-compatibles).
 
 > [!NOTE]
 > **Versión 0.10, en uso en una k80_bsp.** La radio FM y el teléfono propios están en desarrollo: por ahora, esos
@@ -89,7 +89,7 @@ sin abrir la app de cada una.
   lo del coche) y *Animaciones rápidas* a 0,5×.
 - **Ajustes**: mapa o panel, corrección de la velocidad (±15 %), reiniciar el viaje, permitir ver qué suena y
   elegir la pantalla de inicio.
-- **Servicios innecesarios**: desactiva con `pm disable-user` actualizadores que envían datos a China (Adups FOTA),
+- **Servicios innecesarios**: desactiva con `pm disable-user` actualizadores como Adups FOTA (que, según investigadores de seguridad, enviaba datos a China),
   registros de depuración, fondos animados, impresión y apps de serie que nadie usa en un coche, más las
   *Recommended* de [UAD-ng](https://github.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation).
   **Nada que suene a coche aparece nunca**: radio, cámara de marcha atrás, Bluetooth, CAN bus, MCU, mandos del
@@ -116,7 +116,7 @@ EdgeOS Car nunca lo ofrece en Servicios innecesarios.
 
 ### Para Servicios innecesarios y Animaciones rápidas: sin instalar nada más
 
-Android 8 no deja que una app desactive otras. EdgeOS Car lo hace solo, de dos maneras:
+Android no deja que una app normal desactive otras. EdgeOS Car lo hace solo, de dos maneras:
 
 1. **Con root**, si la radio lo tiene (muchas lo traen): lo usa directamente.
 2. **Con el ADB de la propia radio**: EdgeOS Car lleva dentro un cliente ADB que se conecta a la radio por la
@@ -164,6 +164,11 @@ Son mapas vectoriales de [Mapsforge](https://github.com/mapsforge/mapsforge) con
 EdgeOS Car lo hace **Smith-Develop** y es gratis. Sistema → **Acerca de** cuenta qué es, enlaza a este proyecto
 para contactar o proponer mejoras ([issues](https://github.com/Smith-Develop/EdgeOS/issues)) y tiene el botón
 **Invítame a un café** ([PayPal](https://www.paypal.com/ncp/payment/TD5SNJ7PAXJKA)).
+
+## Licencia
+
+Software libre bajo la [GPL-3.0](../LICENSE), sin garantía. Componentes de terceros y privacidad en
+[`AVISOS-LEGALES.md`](../AVISOS-LEGALES.md); dentro de la app, en Sistema → Acerca de → *Licencias y privacidad*.
 
 ## Volver atrás
 

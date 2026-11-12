@@ -11,8 +11,8 @@
 
 | | Para | Qué es |
 |---|---|---|
-| **[EdgeOS Car](#edgeos-car-la-radio-del-coche)** | Radios Android de coche (Android 8 o superior) | Una capa completa sobre la radio: velocidad por GPS, mapa sin internet, música de cualquier fuente, tu coche a medida, modo oscuro y una pantalla para optimizar el sistema. |
-| **[Vidrio](#vidrio-el-móvil)** | Móviles con Android 13 o superior | Un inicio con aspecto de iOS 26 ("Liquid Glass") que limpia las apps de fábrica sin root. |
+| **[EdgeOS Car](#edgeos-car-la-radio-del-coche)** | Radios Android de coche (Android 6 o superior) | Una capa completa sobre la radio: velocidad por GPS, mapa sin internet, música de cualquier fuente, tu coche a medida, modo oscuro y una pantalla para optimizar el sistema. |
+| **[Vidrio](#vidrio-el-móvil)** | Móviles con Android 13 o superior | Un inicio de vidrio translúcido, inspirado en iOS 26, que limpia las apps de fábrica sin root. |
 
 ---
 
@@ -75,7 +75,7 @@ interna y los USB que se pausa solo durante las llamadas.
 - **Bluetooth** (móviles emparejados y conectados) y **brillo**, con un automático que baja solo al anochecer.
 - **Estado** de la radio: memoria, almacenamiento y temperatura del procesador.
 - **Optimización**: liberar memoria, animaciones más rápidas y **servicios innecesarios** desactivables, como el
-  actualizador Adups, que envía datos a China. **Nada del coche aparece nunca** (radio, cámara, Bluetooth, CAN bus,
+  actualizador Adups, que según investigadores de seguridad enviaba datos a China. **Nada del coche aparece nunca** (radio, cámara, Bluetooth, CAN bus,
   volante, audio, GPS) y *Restaurar todo* lo devuelve.
 - **Tema**: claro, oscuro o automático (amanecer y atardecer según donde estés).
 - **Mapas sin conexión**: la Comunidad de Madrid de un toque, o cualquier región del catálogo.
@@ -88,21 +88,25 @@ Todo en **pantalla completa**, sin la barra del sistema. Los detalles de cada fu
 
 ### Radios compatibles
 
-**Requisitos:** Android **8.0 o superior** y pantalla horizontal, de cualquier resolución (el diseño se escala;
-revisado a 1024×600 y a 1280×720). Para la velocidad hace falta el GPS de la radio; internet es opcional.
+**Requisitos:** Android **6.0 o superior** y pantalla **horizontal** de cualquier resolución: 800×480, 1024×600,
+1280×720, 1920×720… (el diseño se escala; revisado a 1024×600 y a 1280×720). Cualquier procesador (MediaTek,
+Rockchip, Allwinner, Unisoc, Qualcomm). Para la velocidad hace falta el GPS de la radio; internet es opcional.
 
 | Radio | Estado |
 |---|---|
 | **k80_bsp de Reglink** (MediaTek MT6580, 1 GB, Android 8.1 aunque se anuncie como 12, 1280×720, firmware `CMENZX80-U1`) | ✅ **En uso.** Es la radio para la que se hizo, inspeccionada a fondo. |
 | Otras radios **Reglink / "alps" con MT6580** | 🟡 Deberían funcionar igual (misma plataforma). Sin probar. |
-| **FYT** (Joying, Atoto…), **MTCD/MTCE** (PX5/PX6), **TS10**, **Allwinner T3/T5** y otras genéricas con Android 8–13 | 🟡 El launcher debería funcionar. Botones del volante y radio FM dependen de cada fabricante. Sin probar. |
-| Radios con Android 7 o anterior | ❌ No compatibles. |
+| **FYT** (Joying, Atoto…), **MTCD/MTCE** (PX5/PX6/PX30), **TS10/TS18**, **Allwinner T3/T5** y otras genéricas con Android 6–14 | 🟡 El launcher debería funcionar. Botones del volante y radio FM dependen de cada fabricante. Sin probar. |
+| Radios con Android 5 o anterior, o con pantalla vertical (estilo Tesla) | ❌ No compatibles por ahora. |
+
+En Android 10 o más nuevo, Google no deja que las apps enciendan el Wi-Fi ni se conecten a una red: EdgeOS Car
+abre el panel del sistema para eso. Lo demás funciona igual.
 
 Qué necesita cada función:
 
 | Función | Funciona en |
 |---|---|
-| Inicio, velocidad, mapa, música, apps, tema, tu coche | Cualquier radio con Android 8+ |
+| Inicio, velocidad, mapa, música, apps, tema, tu coche, Wi-Fi, Bluetooth, brillo | Cualquier radio con Android 6+ |
 | Servicios innecesarios y animaciones rápidas | Radios con **root** o con el **ADB por red** activo (la mayoría lo traen); sin instalar nada más |
 | Botones del volante | Los que llegan a Android como teclas. En la k80_bsp van por el microcontrolador: se usa la herramienta de fábrica |
 | Android Auto | Radios con app receptora: Zlink, AutoKit, Carlinkit, TLink o la propia (en la k80_bsp, `yellow.android.aasink`) |
@@ -160,7 +164,7 @@ revisaba.
   multimedia de Android; el reproductor propio publica la suya, para que lo controlen los botones del volante.
 
 **Cómo se comprueba**
-- Compila con AGP 9.3 y Kotlin 2.4 (`compileSdk 37`, `minSdk 26`, `targetSdk 36`).
+- Compila con AGP 9.3 y Kotlin 2.4 (`compileSdk 37`, `minSdk 23`, `targetSdk 36`).
 - La interfaz se revisa sin radio, dibujándola a 1024×600 y 1280×720 con
   [Paparazzi](https://github.com/cashapp/paparazzi) (el motor de vista previa de Android Studio): así salen las
   capturas de arriba, y así apareció un fallo que cerraba la app al arrancar antes de que llegara a la radio.
@@ -175,14 +179,14 @@ luces, gasolina) con una caja CAN o un adaptador OBD2, con un modo para "enseña
 
 ## Vidrio: el móvil
 
-Un launcher con aspecto de iOS 26 ("Liquid Glass") que además limpia las apps de fábrica, sin root y sin PC.
+Un launcher con un estilo de vidrio translúcido, inspirado en el diseño de iOS 26, que además limpia las apps de fábrica, sin root y sin PC.
 Pensado para el **Motorola Edge 70 con Android 16**; funciona en cualquier Android 13 o superior.
 
 > [!IMPORTANT]
-> **Versión 0.1: compila, pero aún no se ha probado en un teléfono.** Las imágenes son **maquetas del diseño**,
-> no capturas reales.
+> **Versión 0.1: compila, pero aún no se ha probado en un teléfono.** Las capturas llegarán cuando funcione en
+> uno real.
 
-- **Inicio estilo iPhone**: cuadrícula de 4 columnas por páginas, puntos de página, botón **Buscar** sobre el
+- **Inicio en cuadrícula**: 4 columnas por páginas, puntos de página, botón **Buscar** sobre el
   dock e iconos en cuadrado redondeado.
 - **Dock de vidrio** con hasta 4 apps; la primera vez pone teléfono, mensajes, navegador y cámara.
 - **Búsqueda** sin distinguir tildes ni mayúsculas.
@@ -195,18 +199,6 @@ Pensado para el **Motorola Edge 70 con Android 16**; funciona en cualquier Andro
 El vidrio es [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass): desenfoque, refracción y
 viveza de color en tiempo real.
 
-<table>
-  <tr>
-    <td align="center"><img src="docs/screenshots/home.png" width="220" alt="Pantalla de inicio: cuadrícula de iconos, puntos de página, botón Buscar y dock de vidrio"><br><b>Inicio</b></td>
-    <td align="center"><img src="docs/screenshots/search.png" width="220" alt="Búsqueda: el fondo desenfocado y los resultados de 'ca'"><br><b>Búsqueda</b></td>
-    <td align="center"><img src="docs/screenshots/menu.png" width="220" alt="Menú de una app: añadir al dock, información y desinstalar"><br><b>Menú de una app</b></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="docs/screenshots/settings.png" width="220" alt="Ajustes del launcher al mantener pulsado el fondo"><br><b>Ajustes</b></td>
-    <td align="center"><img src="docs/screenshots/debloat.png" width="220" alt="Limpieza: lista de apps de Motorola que se pueden desactivar"><br><b>Limpieza</b></td>
-    <td></td>
-  </tr>
-</table>
 
 **Instalar:** con Claude Code, dile *"Instala EdgeOS en mi Moto Edge 70. Ve diciéndome lo que necesites de mí."*
 A mano, la guía paso a paso está en [`docs/INSTALACION.md`](docs/INSTALACION.md).
@@ -219,17 +211,19 @@ El fondo lo dibuja el propio launcher: Android 13+ no deja que una app normal le
 
 ---
 
-## Licencias
+## Licencia y avisos
 
-- Código de EdgeOS (Car y Vidrio): aún sin licencia elegida.
-- [osmdroid](https://github.com/osmdroid/osmdroid): Apache 2.0. [Mapsforge](https://github.com/mapsforge/mapsforge):
-  LGPL-3.0. Datos de mapa © colaboradores de [OpenStreetMap](https://www.openstreetmap.org/copyright), ODbL.
-- Cliente ADB de EdgeOS Car adaptado de [Free My TV](https://github.com/simbasjungles/free-my-tv) (MIT).
-- [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) (`backdrop`, `shapes`): Apache 2.0.
-  [Shizuku API](https://github.com/RikkaApps/Shizuku-API): Apache 2.0.
-- La lista de UAD-ng es **GPL-3**: se **descarga** al usarla y no va dentro de los APK.
-- Fuente Inter: SIL Open Font License ([`LICENSE-Inter-OFL.txt`](LICENSE-Inter-OFL.txt)).
-- No se usa ningún recurso de Apple ni de fabricantes de coches.
+EdgeOS es **software libre** bajo la [GNU GPL v3.0](LICENSE): puedes usarlo, estudiarlo, modificarlo y repartirlo,
+y las versiones modificadas que se repartan tienen que seguir siendo libres y con su código. Se ofrece **sin
+garantía**.
+
+Es un proyecto independiente, sin relación con Google, Apple, Motorola, Ford, Reglink ni ningún fabricante; sus
+marcas solo se nombran para indicar compatibilidad. No incluye iconos, fuentes ni imágenes de ellas. No recoge
+datos: sin cuentas, anuncios ni analíticas.
+
+Componentes de terceros (osmdroid, Mapsforge, AndroidLiquidGlass, Shizuku API, el cliente ADB de Free My TV, la
+fuente Inter, los datos de OpenStreetMap y la lista de UAD-ng), sus licencias y la política de privacidad, en
+[`AVISOS-LEGALES.md`](AVISOS-LEGALES.md).
 
 ## Apoya el proyecto
 

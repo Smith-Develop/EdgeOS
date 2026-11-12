@@ -49,6 +49,16 @@ class ProgressBar(context: Context, private val now: () -> NowPlaying, private v
     // Solo anima mientras se ve (ni con la pantalla oculta ni con otra app delante): en el MT6580 cada fotograma cuenta.
     override fun onVisibilityAggregated(isVisible: Boolean) {
         super.onVisibilityAggregated(isVisible)
+        animate(isVisible)
+    }
+
+    // onVisibilityAggregated llega en Android 7; en Android 6 se usa esto.
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) animate(isShown)
+    }
+
+    private fun animate(isVisible: Boolean) {
         if (isVisible == running) return
         running = isVisible
         if (isVisible) Choreographer.getInstance().postFrameCallback(this) else Choreographer.getInstance().removeFrameCallback(this)

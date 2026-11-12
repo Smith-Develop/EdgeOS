@@ -2,8 +2,8 @@
 # Copia a este ordenador las apps de fábrica de la radio que hay que estudiar para la radio FM, los botones del
 # volante y la caja CAN-bus (radios Reglink como la k80_bsp). SOLO LEE: no cambia nada en la radio.
 #
-# Uso:  tools/extraer-apks-radio.sh 10.79.107.52           (APKs y su código)
-#       tools/extraer-apks-radio.sh 10.79.107.52 --codigo  (solo el código de las apps: mucho más pequeño)
+# Uso:  tools/extraer-apks-radio.sh 192.168.1.50           (APKs y su código)
+#       tools/extraer-apks-radio.sh 192.168.1.50 --codigo  (solo el código de las apps: mucho más pequeño)
 #
 # Deja apks-radio-<fecha>/ y un .tar.gz. Son apps del fabricante: úsalas solo para estudiar cómo funciona tu radio,
 # no las publiques.

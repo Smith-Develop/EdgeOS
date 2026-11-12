@@ -61,6 +61,7 @@ class SystemPage(
     private val onMapsChanged: () -> Unit = {},
     private val onShowIntro: () -> Unit = {},
     private val isNight: () -> Boolean = { false },
+    private val askBluetooth: () -> Unit = {},
 ) : LinearLayout(context) {
     private val carStatus = Ui.text(context, "", 12f, Ui.TEXT2).apply { maxLines = 2 }
     private val main = Handler(Looper.getMainLooper())
@@ -218,7 +219,13 @@ class SystemPage(
         painting = false
         btList.removeAllViews()
         if (!bt.available) { btStatus.text = "Esta radio no tiene Bluetooth de Android."; return }
+        btStatus.setOnClickListener(null)
         if (!bt.enabled) { btStatus.text = "Apagado. Actívalo para el manos libres y la música del móvil."; return }
+        if (!bt.allowed) {
+            btStatus.text = "Toca aquí para permitir que EdgeOS Car vea los móviles emparejados."
+            btStatus.setOnClickListener { askBluetooth() }
+            return
+        }
         val devices = bt.devices()
         val on = devices.filter { it.connected }
         btStatus.text = when {
@@ -909,6 +916,20 @@ class SystemPage(
         links.addView(link("Contactar o sugerir algo") { web("$REPO/issues") }, lp(0, WRAP, 1f))
         links.addView(link("Proyecto en GitHub") { web(REPO) })
         addView(links)
+        addView(Ui.text(context, "Software libre (GPL-3.0), sin garantía. No afiliado a Google, Apple ni a ningún fabricante.", 12f, Ui.TEXT2)
+            .apply { maxLines = 3; ellipsize = null }, lp(MATCH, WRAP).apply { topMargin = px(6) })
+        addView(link("Licencias y privacidad") { notices() })
+    }
+
+    private fun notices() {
+        val text = runCatching { context.assets.open("AVISOS.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        val body = Ui.text(context, text, 13f, Ui.TEXT).apply { maxLines = Int.MAX_VALUE; ellipsize = null; setTextIsSelectable(true) }
+        body.setPadding(px(22), px(8), px(22), px(8))
+        Ui.dialog(context)
+            .setTitle("Licencias y privacidad")
+            .setView(ScrollView(context).apply { addView(body) })
+            .setPositiveButton("Cerrar", null)
+            .show()
     }
 
     private fun web(url: String) {

@@ -183,7 +183,7 @@ class Optimizer(private val context: Context, private val prefs: Prefs) {
 
         /** Lista propia para radios MediaTek "alps" (k80_bsp y parecidas): nombre, por qué, nivel. */
         val HEAD_UNIT = mapOf(
-            "com.adups.fota" to Triple("Adups FOTA", "Actualizador de firmware conocido por enviar datos del aparato a China. Estas radios casi nunca reciben actualizaciones por aquí.", "Recomendada"),
+            "com.adups.fota" to Triple("Adups FOTA", "Actualizador de firmware que, según investigadores de seguridad (Kryptowire, 2016), enviaba datos del aparato a servidores en China. Estas radios casi nunca reciben actualizaciones por aquí.", "Recomendada"),
             "com.adups.fota.sysoper" to Triple("Adups FOTA (sistema)", "Parte del actualizador Adups.", "Recomendada"),
             "com.redstone.ota.ui" to Triple("Redstone OTA", "Otro actualizador de firmware de fábrica que se conecta en segundo plano.", "Recomendada"),
             "com.mediatek.mtklogger" to Triple("MTK Logger", "Registro de depuración de MediaTek: escribe logs en segundo plano y gasta almacenamiento.", "Recomendada"),

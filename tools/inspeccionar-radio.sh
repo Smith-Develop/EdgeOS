@@ -3,7 +3,7 @@
 # cómo controla la radio FM, si llegan las teclas del volante, si hay caja CAN-bus y qué trae el fabricante.
 # SOLO LEE: no instala, no desactiva ni cambia nada.
 #
-# Uso:  tools/inspeccionar-radio.sh 10.79.107.52        (ADB por red)
+# Uso:  tools/inspeccionar-radio.sh 192.168.1.50        (ADB por red)
 #       tools/inspeccionar-radio.sh                     (radio conectada por USB)
 #
 # Al final pide dos cosas con la radio delante: pulsar los botones del volante y cambiar de emisora.

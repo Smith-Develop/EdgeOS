@@ -91,7 +91,9 @@ class MapCard(
         Ui.card(this)
         Configuration.getInstance().apply {
             load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
-            userAgentValue = context.packageName
+            // La política de OpenStreetMap pide que cada app se identifique, con una forma de contactar.
+            userAgentValue = "EdgeOSCar/" + runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() +
+                " (+https://github.com/Smith-Develop/EdgeOS)"
             osmdroidBasePath = File(context.filesDir, "osmdroid")
             osmdroidTileCache = File(context.cacheDir, "tiles")
             tileFileSystemCacheMaxBytes = 300L * 1024 * 1024
@@ -194,7 +196,11 @@ class MapCard(
         addView(trip, LayoutParams(MATCH, WRAP, Gravity.BOTTOM).apply { setMargins(px(14), 0, px(14), px(26)) })
 
         // Atribución obligatoria de OpenStreetMap.
-        val credit = Ui.text(context, "© OpenStreetMap", 10f, Ui.TEXT2)
+        val credit = Ui.text(context, "© colaboradores de OpenStreetMap", 10f, Ui.TEXT2)
+        credit.setOnClickListener {
+            runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
+                android.net.Uri.parse("https://www.openstreetmap.org/copyright")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
         addView(credit, LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, px(16), px(8)) })
     }
 

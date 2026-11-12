@@ -8,6 +8,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
+import android.os.Build
 import android.os.Looper
 import android.os.SystemClock
 import io.edgeos.car.Prefs
@@ -49,7 +50,8 @@ class Drive(context: Context, private val prefs: Prefs) : LocationListener {
     private var max = prefs.tripMax
     private var savedAt = 0L
 
-    private val gnss = object : GnssStatus.Callback() {
+    // Satélites en uso: solo desde Android 7; antes se queda sin el número (la velocidad funciona igual).
+    private val gnss = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) null else object : GnssStatus.Callback() {
         override fun onSatelliteStatusChanged(status: GnssStatus) {
             var used = 0
             for (i in 0 until status.satelliteCount) if (status.usedInFix(i)) used++
@@ -78,7 +80,7 @@ class Drive(context: Context, private val prefs: Prefs) : LocationListener {
         if (lm == null || !lm.allProviders.contains(LocationManager.GPS_PROVIDER)) return false
         return try {
             lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, this, Looper.getMainLooper())
-            lm.registerGnssStatusCallback(gnss, main)
+            if (gnss != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) lm.registerGnssStatusCallback(gnss, main)
             main.removeCallbacks(watchdog)
             main.postDelayed(watchdog, 1000)
             true
@@ -89,7 +91,7 @@ class Drive(context: Context, private val prefs: Prefs) : LocationListener {
 
     fun stop() {
         lm?.removeUpdates(this)
-        lm?.unregisterGnssStatusCallback(gnss)
+        if (gnss != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) lm?.unregisterGnssStatusCallback(gnss)
         main.removeCallbacks(watchdog)
         save()
     }
